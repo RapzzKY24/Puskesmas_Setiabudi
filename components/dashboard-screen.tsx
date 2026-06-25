@@ -97,9 +97,9 @@ function HeroSection() {
     >
       <View style={s.heroBg}>
         <View style={s.heroContent}>
-          <Text style={s.heroTitle}>Layanan Kesehatan{'\n'}Terpercaya</Text>
+          <Text style={s.heroTitle}>Puskesmas Setiabudi</Text>
           <Text style={s.heroSub}>
-            Konsultasi dengan dokter spesialis tanpa antre
+            Ambil jadwal antrian online tanpa antre langsung
           </Text>
         </View>
         <View style={s.heroIllus}>
@@ -117,7 +117,7 @@ function HeroSection() {
           />
           <TextInput
             style={s.searchInput}
-            placeholder="Cari Poli , Dokter , dan Spesialis"
+            placeholder="Cari Poli"
             placeholderTextColor={C.textMuted}
             autoCapitalize="none"
           />
@@ -210,7 +210,7 @@ function QueueSection() {
           <View style={s.queueInfo}>
             <Text style={s.queuePoli}>Poli Jantung</Text>
             <Text style={s.queueStatus}>
-              Anda Sekarang Menunggu Sekitar 2 antrean lagi
+              Anda Sekarang Menunggu 2 Antrean Lagi
             </Text>
           </View>
           <View style={s.queueNumWrap}>
@@ -231,7 +231,7 @@ function QueueSection() {
             style={{ marginRight: 6 }}
           />
           <Text style={s.confirmText}>
-            Konfirmasi Antrean Kamu Pada Rabu , 23 Mei 2026
+            Segera Datang Ke Poliklinik Pilihan Anda
           </Text>
         </TouchableOpacity>
       </Animated.View>

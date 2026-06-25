@@ -276,7 +276,7 @@ export function ReservationScreen() {
             onSelect={setSelectedDate}
           />
           <View style={s.poliSection}>
-            <Text style={s.sectionLabel}>PILIH LAYANAN POLI</Text>
+            <Text style={s.sectionLabel}>PILIH LAYANAN POLIKLINIK</Text>
             {POLIS.map((poli, idx) => (
               <PoliCard
                 key={poli.id}

@@ -109,8 +109,7 @@ function CheckinSection() {
       <View style={s.checkinBody}>
         <Text style={s.checkinTitle}>Check-in Kehadiran</Text>
         <Text style={s.checkinDesc}>
-          Pindai kode QR ini pada kios mandiri atau tunjukkan ke petugas
-          pendaftaran saat tiba di lokasi.
+          Pindai kode QR ini untuk memastikan bahwa anda hadir untuk konsultasi
         </Text>
       </View>
     </Animated.View>
