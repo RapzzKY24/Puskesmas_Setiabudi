@@ -42,6 +42,7 @@ type RegTab = 'nik' | 'phone';
 
 type RegFormData = {
   identifier: string;
+  nama?: string;
   password: string;
   confirmPassword: string;
 };
@@ -59,6 +60,9 @@ const createRegSchema = (tab: RegTab) =>
               : /^[0-9+\-\s()]{10,15}$/.test(val),
           tab === 'nik' ? 'NIK harus 16 digit angka' : 'Nomor HP tidak valid',
         ),
+      nama: tab === 'phone'
+        ? z.string().min(1, 'Nama wajib diisi')
+        : z.string().optional(),
       password: z.string().min(6, 'Kata sandi minimal 6 karakter'),
       confirmPassword: z.string().min(1, 'Konfirmasi kata sandi wajib diisi'),
     })
@@ -170,7 +174,7 @@ export function RegisterScreen() {
     reset,
   } = useForm<RegFormData>({
     resolver: zodResolver(schema),
-    defaultValues: { identifier: '', password: '', confirmPassword: '' },
+    defaultValues: { identifier: '', nama: '', password: '', confirmPassword: '' },
   });
 
   const handleTabChange = useCallback(
@@ -184,10 +188,15 @@ export function RegisterScreen() {
   const onSubmit = useCallback(
     async (data: RegFormData) => {
       try {
-        await api.post('/api/auth/register', {
+        const res = await api.post('/api/auth/register', {
           identifier: data.identifier,
           password: data.password,
+          ...(data.nama ? { nama: data.nama } : {}),
         });
+        if (res.data.otp) {
+          console.log('OTP:', res.data.otp);
+          alert(`Kode OTP: ${res.data.otp}`);
+        }
         router.push({ pathname: '/otp', params: { identifier: data.identifier } });
       } catch (err: any) {
         const msg = err.response?.data?.message || 'Registrasi gagal';
@@ -260,6 +269,33 @@ export function RegisterScreen() {
                 </Text>
               )}
             </View>
+
+            {activeTab === 'phone' && (
+              <View style={s.fieldGroup}>
+                <Text style={s.label}>Nama Lengkap</Text>
+                <View style={[s.inputWrap, errors.nama && s.inputError]}>
+                  <Ionicons name="person-outline" size={20} color={C.textMuted} style={s.inputIcon} />
+                  <Controller
+                    control={control}
+                    name="nama"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <TextInput
+                        style={s.input}
+                        placeholder="Budi Santoso"
+                        placeholderTextColor={C.textMuted}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        value={value}
+                        autoCapitalize="words"
+                      />
+                    )}
+                  />
+                </View>
+                {errors.nama && (
+                  <Text style={s.errorText}>{errors.nama.message}</Text>
+                )}
+              </View>
+            )}
 
             <View style={s.fieldGroup}>
               <Text style={s.label}>Kata Sandi</Text>

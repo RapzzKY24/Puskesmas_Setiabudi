@@ -38,7 +38,7 @@ const C = {
   inputBg: '#f8fafc',
 } as const;
 
-const OTP_LENGTH = 4;
+const OTP_LENGTH = 6;
 
 function LogoHeader() {
   return (
@@ -215,7 +215,10 @@ export function OtpScreen() {
     setLoading(true);
     try {
       const code = otp.join('');
-      const res = await api.post('/api/auth/verify-otp', { code });
+      const res = await api.post('/api/auth/verify-otp', {
+        identifier: params.identifier,
+        code,
+      });
       if (res.data.token) {
         useAuthStore.getState().login(res.data.token, res.data.user);
         router.replace('/(app)');
@@ -228,13 +231,13 @@ export function OtpScreen() {
     } finally {
       setLoading(false);
     }
-  }, [isComplete, otp, loading, router]);
+  }, [isComplete, otp, loading, router, params.identifier]);
 
   const handleResend = useCallback(async () => {
     if (!params.identifier) return;
     try {
-      await api.post('/api/auth/resend-otp', { identifier: params.identifier });
-      alert('Kode OTP telah dikirim ulang');
+      const res = await api.post('/api/auth/resend-otp', { identifier: params.identifier });
+      alert(res.data.message || 'Kode OTP telah dikirim ulang');
     } catch {
       alert('Gagal mengirim ulang OTP');
     }
@@ -346,12 +349,13 @@ const s = StyleSheet.create({
   otpRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 14,
+    gap: 8,
   },
   otpBox: {
-    width: 62,
-    height: 62,
-    borderRadius: 14,
+    flex: 1,
+    maxWidth: 56,
+    aspectRatio: 1,
+    borderRadius: 12,
     backgroundColor: C.inputBg,
     borderWidth: 1.5,
     borderColor: C.border,

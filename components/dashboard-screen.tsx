@@ -49,7 +49,11 @@ function TopBar({ nama }: { nama: string }) {
   const router = useRouter();
   return (
     <View style={s.topBar}>
-      <View style={s.profileRow}>
+      <TouchableOpacity
+        style={s.profileRow}
+        activeOpacity={0.7}
+        onPress={() => router.push('/(app)/profile')}
+      >
         <View style={s.avatar}>
           <Ionicons name="person" size={18} color="#fff" />
         </View>
@@ -57,7 +61,7 @@ function TopBar({ nama }: { nama: string }) {
           <Text style={s.greeting}>Halo , Selamat Datang</Text>
           <Text style={s.userName}>{nama} 👋</Text>
         </View>
-      </View>
+      </TouchableOpacity>
       <TouchableOpacity
         style={s.notifBtn}
         activeOpacity={0.7}

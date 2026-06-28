@@ -140,8 +140,23 @@ function HistoryCard({ item, index }: { item: HistoryItem; index: number }) {
   );
 }
 
+function EmptyState() {
+  return (
+    <View style={s.emptyWrap}>
+      <View style={s.emptyIconWrap}>
+        <Ionicons name="document-text-outline" size={40} color={C.textMuted} />
+      </View>
+      <Text style={s.emptyTitle}>Belum Ada Kunjungan</Text>
+      <Text style={s.emptyDesc}>
+        Anda belum melakukan aktivitas apapun di Puskesmas.
+      </Text>
+    </View>
+  );
+}
+
 export function HistoryScreen() {
   const [items, setItems] = useState<HistoryItem[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -150,6 +165,8 @@ export function HistoryScreen() {
         setItems(res.data);
       } catch (err) {
         console.error('History fetch error', err);
+      } finally {
+        setLoaded(true);
       }
     };
     fetchData();
@@ -165,8 +182,10 @@ export function HistoryScreen() {
         >
           <Header />
           <View style={s.listSection}>
-            {items.length === 0 ? (
+            {!loaded ? (
               <ActivityIndicator size="large" color={C.primary} style={s.loading} />
+            ) : items.length === 0 ? (
+              <EmptyState />
             ) : (
               items.map((item, idx) => (
                 <HistoryCard key={item.id} item={item} index={idx} />
@@ -267,6 +286,32 @@ const s = StyleSheet.create({
   },
   resumeText: { fontSize: 14, fontWeight: '700', color: '#fff' },
 
+  emptyWrap: {
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingHorizontal: 32,
+  },
+  emptyIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: C.border + '44',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: C.text,
+    marginBottom: 8,
+  },
+  emptyDesc: {
+    fontSize: 14,
+    color: C.textMuted,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
   spacer: { height: 20 },
   loading: { marginTop: 40 },
 });

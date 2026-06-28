@@ -10,6 +10,7 @@ export default function AppLayout() {
       <Stack.Screen name="e-resume" />
       <Stack.Screen name="notifications" />
       <Stack.Screen name="ticket-detail" />
+      <Stack.Screen name="profile" />
     </Stack>
   );
 }

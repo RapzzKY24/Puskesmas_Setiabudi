@@ -23,7 +23,7 @@ export class AuthController {
   @Post('verify-otp')
   @HttpCode(HttpStatus.OK)
   verifyOtp(@Body() body: VerifyOtpRequestDto) {
-    return this.auth.verifyOtp(body.code);
+    return this.auth.verifyOtp(body.identifier, body.code, body.nama);
   }
 
   @Post('resend-otp')
