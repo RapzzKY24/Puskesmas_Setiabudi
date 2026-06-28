@@ -216,9 +216,8 @@ function QueueSection({ queueInfo, loading }: { queueInfo: QueueInfo | null; loa
             <Text style={s.queuePoli}>{poliName}</Text>
             <Text style={s.queueStatus}>
               {isFirst
-                ? 'Silakan masuk, Anda antrean pertama'
-                : `Anda menunggu ${queueAhead} antrean lagi`}
-              {' \u00B7 '}{estWaitLabel}
+                ? `Anda antrean pertama. ${estWaitLabel}`
+                : `Anda menunggu ${queueAhead} antrean lagi. ${estWaitLabel}`}
             </Text>
           </View>
           <View style={s.queueNumWrap}>
@@ -239,7 +238,7 @@ function QueueSection({ queueInfo, loading }: { queueInfo: QueueInfo | null; loa
             style={{ marginRight: 6 }}
           />
           <Text style={s.confirmText}>
-            {isFirst ? 'Anda dipanggil, silakan menuju poli' : `Konfirmasi Antrean Kamu Pada ${new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`}
+            {isFirst ? 'Anda dipanggil, silakan menuju poli' : 'Silakan menuju poli saat nomor Anda dipanggil'}
           </Text>
         </TouchableOpacity>
       </Animated.View>

@@ -26,7 +26,7 @@ export class AntreanService {
     });
 
     if (!antrean) {
-      return { antrean: null, queueAhead: 0, totalQueue: 0, position: 0, currentServing: null, estWaitMin: 0, estWaitLabel: '< 1 Menit' };
+      return { antrean: null, queueAhead: 0, totalQueue: 0, position: 0, currentServing: null, estWaitMin: 0, estWaitLabel: '-' };
     }
 
     const apptTanggal = antrean.appointment?.tanggal;
@@ -57,16 +57,21 @@ export class AntreanService {
       orderBy: { updatedAt: 'desc' },
     });
 
-    const estWait = antrean.poli ? queueAhead * antrean.poli.estWait : 0;
+    const JAM_BUKA = 8;
+    const position = queueAhead + 1;
+    const totalMenit = position * (antrean.poli?.estWait ?? 15);
+    const jam = JAM_BUKA + Math.floor(totalMenit / 60);
+    const menit = totalMenit % 60;
+    const jamStr = `${String(jam).padStart(2, '0')}.${String(menit).padStart(2, '0')}`;
 
     return {
       antrean,
       queueAhead,
       totalQueue,
-      position: queueAhead + 1,
+      position,
       currentServing: inService?.nomor ?? null,
-      estWaitMin: estWait,
-      estWaitLabel: estWait > 0 ? `~${estWait} Menit` : '< 1 Menit',
+      estWaitMin: totalMenit,
+      estWaitLabel: `Estimasi dilayani pukul ${jamStr} WIB`,
     };
   }
 
@@ -117,13 +122,18 @@ export class AntreanService {
             createdAt: { lt: antrean.createdAt },
           },
         });
-        estimasiMenit = countAhead * antrean.poli.estWait;
+        const position = countAhead + 1;
+        const totalMenit = position * antrean.poli.estWait;
+        const JAM_BUKA = 8;
+        const jam = JAM_BUKA + Math.floor(totalMenit / 60);
+        const menit = totalMenit % 60;
+        estimasiMenit = totalMenit;
       }
     }
 
     return {
       sedangDilayani: displayNomor,
-      estimasi: estimasiMenit > 0 ? `${estimasiMenit} Menit` : '< 1 Menit',
+      estimasi: `Estimasi dilayani pukul ${String(8 + Math.floor(estimasiMenit / 60)).padStart(2, '0')}.${String(estimasiMenit % 60).padStart(2, '0')} WIB`,
     };
   }
 

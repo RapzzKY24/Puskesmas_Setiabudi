@@ -65,12 +65,15 @@ describe('AntreanService', () => {
         position: 0,
         currentServing: null,
         estWaitMin: 0,
-        estWaitLabel: '< 1 Menit',
+        estWaitLabel: '-',
       });
     });
 
     it('should return correct queue info with people ahead', async () => {
-      const antrean = mockAntrean({ createdAt: new Date('2026-06-28T08:05:00Z') });
+      const antrean = mockAntrean({
+        poli: mockPoli({ estWait: 30 }),
+        createdAt: new Date('2026-06-28T08:05:00Z'),
+      });
       prisma.antrean.findFirst.mockResolvedValue(antrean);
       prisma.antrean.count
         .mockResolvedValueOnce(3)   // queueAhead
@@ -84,12 +87,15 @@ describe('AntreanService', () => {
       expect(result.totalQueue).toBe(5);
       expect(result.position).toBe(4);
       expect(result.currentServing).toBe('UMUM-003');
-      expect(result.estWaitMin).toBe(90);  // 3 × 30
-      expect(result.estWaitLabel).toBe('~90 Menit');
+      expect(result.estWaitMin).toBe(120);  // 4 × 30
+      expect(result.estWaitLabel).toBe('Estimasi dilayani pukul 10.00 WIB');
     });
 
     it('should return position 1 when no one ahead', async () => {
-      const antrean = mockAntrean({ createdAt: new Date('2026-06-28T08:00:00Z') });
+      const antrean = mockAntrean({
+        poli: mockPoli({ estWait: 30 }),
+        createdAt: new Date('2026-06-28T08:00:00Z'),
+      });
       prisma.antrean.findFirst.mockResolvedValue(antrean);
       prisma.antrean.count
         .mockResolvedValueOnce(0)
@@ -102,7 +108,7 @@ describe('AntreanService', () => {
 
       expect(result.position).toBe(1);
       expect(result.currentServing).toBeNull();
-      expect(result.estWaitLabel).toBe('< 1 Menit');
+      expect(result.estWaitLabel).toBe('Estimasi dilayani pukul 08.30 WIB');
     });
 
     it('should use poli estWait for estimation', async () => {
@@ -120,8 +126,8 @@ describe('AntreanService', () => {
 
       const result = await service.getMyQueueInfo('user-1');
 
-      expect(result.estWaitMin).toBe(60);  // 4 × 15
-      expect(result.estWaitLabel).toBe('~60 Menit');
+      expect(result.estWaitMin).toBe(75);  // 5 × 15
+      expect(result.estWaitLabel).toBe('Estimasi dilayani pukul 09.15 WIB');
     });
 
     it('should handle case where poli is null gracefully', async () => {
@@ -136,8 +142,8 @@ describe('AntreanService', () => {
 
       const result = await service.getMyQueueInfo('user-1');
 
-      expect(result.estWaitMin).toBe(0);
-      expect(result.estWaitLabel).toBe('< 1 Menit');
+      expect(result.estWaitMin).toBe(45);  // 3 × 15 (default)
+      expect(result.estWaitLabel).toBe('Estimasi dilayani pukul 08.45 WIB');
     });
   });
 
@@ -204,7 +210,7 @@ describe('AntreanService', () => {
       const result = await service.getStatus('poli-1');
 
       expect(result.sedangDilayani).toBe('-');
-      expect(result.estimasi).toBe('< 1 Menit');
+      expect(result.estimasi).toBe('Estimasi dilayani pukul 08.00 WIB');
     });
 
     it('should return current serving number when someone is in service', async () => {
@@ -224,15 +230,16 @@ describe('AntreanService', () => {
 
       const result = await service.getStatus('poli-1', 'antrean-5');
 
-      expect(result.estimasi).toBe('60 Menit');  // 2 × 30
+      // position = 3, totalMenit = 3 × 30 = 90 → 09.30
+      expect(result.estimasi).toBe('Estimasi dilayani pukul 09.30 WIB');
     });
 
-    it('should return less than 1 minute when no antreanId', async () => {
+    it('should return 08.00 when no antreanId (default)', async () => {
       prisma.antrean.findFirst.mockResolvedValue(mockAntrean({ nomor: 'UMUM-003', status: 'IN_SERVICE' }));
 
       const result = await service.getStatus('poli-1');
 
-      expect(result.estimasi).toBe('< 1 Menit');
+      expect(result.estimasi).toBe('Estimasi dilayani pukul 08.00 WIB');
     });
 
     it('should handle antrean with null poli gracefully', async () => {
@@ -242,7 +249,7 @@ describe('AntreanService', () => {
 
       const result = await service.getStatus('poli-1', 'antrean-5');
 
-      expect(result.estimasi).toBe('< 1 Menit');
+      expect(result.estimasi).toBe('Estimasi dilayani pukul 08.00 WIB');
     });
   });
 
