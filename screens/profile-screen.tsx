@@ -11,21 +11,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useProfile } from '@/hooks/use-profile';
-
-const C = {
-  primary: '#0d9488',
-  primaryDark: '#0f766e',
-  primaryLight: '#14b8a6',
-  primaryBg: '#ccfbf1',
-  background: '#f8fafc',
-  card: '#ffffff',
-  text: '#0f172a',
-  textSecondary: '#475569',
-  textMuted: '#94a3b8',
-  border: '#e2e8f0',
-  danger: '#dc2626',
-  dangerBg: '#fef2f2',
-};
+import { C } from '@/styles/theme';
 
 function Header() {
   const router = useRouter();

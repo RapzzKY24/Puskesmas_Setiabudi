@@ -14,22 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { BottomNav } from '@/components/navigation/bottom-nav';
 import { useEResume, type EResume } from '@/hooks/use-e-resume';
-
-const C = {
-  primary: '#0d9488',
-  primaryDark: '#0f766e',
-  primaryBg: '#ccfbf1',
-  primaryBgLight: '#f0fdfa',
-  background: '#f8fafc',
-  card: '#ffffff',
-  text: '#0f172a',
-  textSecondary: '#475569',
-  textMuted: '#94a3b8',
-  border: '#e2e8f0',
-  successBg: '#dcfce7',
-  successText: '#166534',
-  diagBg: '#f0fdfa',
-};
+import { C } from '@/styles/theme';
 
 function TopBar() {
   const router = useRouter();

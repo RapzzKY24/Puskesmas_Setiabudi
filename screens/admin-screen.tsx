@@ -17,29 +17,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomNav } from '@/components/navigation/bottom-nav';
 import { useAdmin, useAntreanTab, usePoliTab, useEResumeModal, type AdminTab, type AntreanWithUser } from '@/hooks/use-admin';
-
-const C = {
-  primary: '#0d9488',
-  primaryDark: '#0f766e',
-  primaryLight: '#14b8a6',
-  primaryBg: '#ccfbf1',
-  primaryBgLight: '#f0fdfa',
-  background: '#f8fafc',
-  card: '#ffffff',
-  text: '#0f172a',
-  textSecondary: '#475569',
-  textMuted: '#94a3b8',
-  border: '#e2e8f0',
-  inputBg: '#f1f5f9',
-  successBg: '#dcfce7',
-  successText: '#166534',
-  danger: '#ef4444',
-  dangerBg: '#fef2f2',
-  waitingBg: '#fef3c7',
-  waitingText: '#92400e',
-  infoBg: '#e0f2fe',
-  infoText: '#0369a1',
-};
+import { C } from '@/styles/theme';
 
 
 

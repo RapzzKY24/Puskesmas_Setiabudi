@@ -20,21 +20,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Controller } from 'react-hook-form';
 import { useRegister } from '@/hooks/use-register';
+import { C as theme } from '@/styles/theme';
 
-const C = {
-  primary: '#0d9488',
-  primaryDark: '#0f766e',
-  primaryLight: '#14b8a6',
-  primaryBg: '#ccfbf1',
-  background: '#f1f5f9',
-  card: '#ffffff',
-  text: '#0f172a',
-  textSecondary: '#475569',
-  textMuted: '#94a3b8',
-  border: '#e2e8f0',
-  error: '#dc2626',
-  inputBg: '#f8fafc',
-} as const;
+const C = { ...theme, background: '#f1f5f9', inputBg: '#f8fafc' } as const;
 
 function LogoHeader() {
   return (

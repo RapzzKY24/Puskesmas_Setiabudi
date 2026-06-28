@@ -17,29 +17,7 @@ import { Controller } from 'react-hook-form';
 import { BottomNav } from '@/components/navigation/bottom-nav';
 import { ConfirmModal } from '@/components/modals/confirm-modal';
 import { useAppointment } from '@/hooks/use-appointment';
-
-const C = {
-  primary: '#0d9488',
-  primaryDark: '#0f766e',
-  primaryLight: '#14b8a6',
-  primaryBg: '#ccfbf1',
-  primaryBgLight: '#f0fdfa',
-  background: '#f8fafc',
-  card: '#ffffff',
-  text: '#0f172a',
-  textSecondary: '#475569',
-  textMuted: '#94a3b8',
-  border: '#e2e8f0',
-  inputBg: '#f1f5f9',
-  successBg: '#dcfce7',
-  successText: '#166534',
-  danger: '#ef4444',
-  dangerBg: '#fef2f2',
-  disabledBg: '#e2e8f0',
-  disabledText: '#cbd5e1',
-  orangeBg: '#fff7ed',
-  orangeText: '#9a3412',
-};
+import { C } from '@/styles/theme';
 
 
 

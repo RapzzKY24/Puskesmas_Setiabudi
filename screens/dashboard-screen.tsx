@@ -20,27 +20,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { BottomNav } from '@/components/navigation/bottom-nav';
 import { useDashboard, type Promo, type QueueInfo } from '@/hooks/use-dashboard';
+import { C } from '@/styles/theme';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const CARD_W = SCREEN_W - 48;
 const PROMO_W = CARD_W * 0.75;
-
-const C = {
-  primary: '#0d9488',
-  primaryDark: '#0f766e',
-  primaryLight: '#14b8a6',
-  primaryBg: '#ccfbf1',
-  primaryBgLight: '#f0fdfa',
-  background: '#f8fafc',
-  card: '#ffffff',
-  text: '#0f172a',
-  textSecondary: '#475569',
-  textMuted: '#94a3b8',
-  border: '#e2e8f0',
-  error: '#dc2626',
-  inputBg: '#f1f5f9',
-  navInactive: '#64748b',
-} as const;
 
 function TopBar({ nama }: { nama: string }) {
   const router = useRouter();

@@ -14,23 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { BottomNav } from '@/components/navigation/bottom-nav';
 import { useTicketDetail } from '@/hooks/use-ticket-detail';
-
-const C = {
-  primary: '#0d9488',
-  primaryDark: '#0f766e',
-  primaryBg: '#ccfbf1',
-  background: '#f8fafc',
-  card: '#ffffff',
-  text: '#0f172a',
-  textSecondary: '#475569',
-  textMuted: '#94a3b8',
-  border: '#e2e8f0',
-  inputBg: '#f1f5f9',
-  warningBg: '#fef3c7',
-  warningText: '#92400e',
-  danger: '#dc2626',
-  infoBg: '#f1f5f9',
-};
+import { C } from '@/styles/theme';
 
 function TopBar() {
   const router = useRouter();
