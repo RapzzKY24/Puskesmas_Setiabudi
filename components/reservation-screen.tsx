@@ -219,15 +219,6 @@ export function ReservationScreen() {
   const [poliList, setPoliList] = useState<PoliData[]>([]);
   const router = useRouter();
 
-  useEffect(() => {
-    api.get<{ dates: DateItem[] }>('/api/appointments/available-dates?poliId=')
-      .then((res) => {
-        const enriched = generateDates(res.data.dates);
-        setDates(enriched);
-      })
-      .catch(() => {});
-  }, []);
-
   const fetchPoli = useCallback(async (date: Date) => {
     try {
       const tanggal = date.toISOString().split('T')[0];
