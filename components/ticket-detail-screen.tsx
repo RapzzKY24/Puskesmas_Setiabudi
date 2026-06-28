@@ -141,21 +141,23 @@ export function TicketDetailScreen() {
 
   useEffect(() => {
     if (hasParams) {
+      const p = params;
+      const u = user;
       setData({
         umum: {
-          nama: user?.nama ?? '-',
-          nik: user?.nik ?? '-',
-          handphone: user?.noHp ?? '-',
+          nama: u?.nama ?? '-',
+          nik: u?.nik ?? '-',
+          handphone: u?.noHp ?? '-',
         },
         kunjungan: {
-          poli: params.poliName ?? '-',
-          keluhan: params.keluhan ?? '-',
-          tanggal: `${params.date} ${params.time}`,
+          poli: p.poliName ?? '-',
+          keluhan: p.keluhan ?? '-',
+          tanggal: `${p.date} ${p.time}`,
         },
         antrean: {
-          nomor: params.nomorAntrean ?? '-',
+          nomor: p.nomorAntrean ?? '-',
           dilayani: '-',
-          status: params.status ?? '-',
+          status: p.status ?? '-',
           estimasi: '-',
         },
       });
@@ -191,7 +193,7 @@ export function TicketDetailScreen() {
       }
     };
     fetchData();
-  }, [hasParams, params, user]);
+  }, [hasParams]);
 
   if (!data) {
     return (
