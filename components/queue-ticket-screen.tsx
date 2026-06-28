@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomNav } from './bottom-nav';
+import { api } from '@/lib/api';
+import { ws } from '@/lib/websocket-client';
+import { Antrean, QueueInfo } from '@/types/api';
 
 const C = {
   primary: '#0d9488',
@@ -60,7 +63,11 @@ function Header() {
   );
 }
 
-function LiveTicket() {
+function LiveTicket({ antrean }: { antrean: Antrean | null }) {
+  const nomor = antrean?.nomor ?? '---';
+  const poliName = antrean?.poli?.name ?? 'Memuat...';
+  const lokasi = antrean?.poli?.lokasi ?? '';
+
   return (
     <Animated.View
       entering={FadeInDown.duration(400).springify()}
@@ -72,26 +79,32 @@ function LiveTicket() {
       </View>
 
       <Text style={s.ticketLabel}>NOMOR ANTREAN ANDA</Text>
-      <Text style={s.ticketNumber}>A-024</Text>
+      <Text style={s.ticketNumber}>{nomor}</Text>
 
       <View style={s.locationSection}>
-        <Text style={s.poliName}>Poli Kandungan & Kebidanan</Text>
-        <Text style={s.locationText}>Gedung B, Lantai 2</Text>
+        <Text style={s.poliName}>{poliName}</Text>
+        {lokasi ? <Text style={s.locationText}>{lokasi}</Text> : null}
       </View>
     </Animated.View>
   );
 }
 
-function StatusGrid() {
+function StatusGrid({
+  sedangDilayani,
+  estimasi,
+}: {
+  sedangDilayani: string;
+  estimasi: string;
+}) {
   return (
     <View style={s.gridRow}>
       <View style={s.gridCard}>
         <Text style={s.gridLabel}>Sedang Dilayani</Text>
-        <Text style={s.gridValue}>A-018</Text>
+        <Text style={s.gridValue}>{sedangDilayani}</Text>
       </View>
       <View style={s.gridCard}>
         <Text style={s.gridLabel}>Estimasi Menunggu</Text>
-        <Text style={s.gridValueDark}>~18 Menit</Text>
+        <Text style={s.gridValueDark}>{estimasi}</Text>
       </View>
     </View>
   );
@@ -118,6 +131,31 @@ function CheckinSection() {
 }
 
 export function QueueTicketScreen() {
+  const [antrean, setAntrean] = useState<QueueInfo['antrean']>(null);
+  const [currentServing, setCurrentServing] = useState<string | null>(null);
+  const [estWaitLabel, setEstWaitLabel] = useState('---');
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await api.get<QueueInfo>('/api/antrean/me');
+        const data = res.data;
+        setAntrean(data.antrean);
+        setCurrentServing(data.currentServing);
+        setEstWaitLabel(data.estWaitLabel);
+      } catch (err) {
+        console.error('Queue ticket fetch error', err);
+      }
+    };
+    fetchData();
+
+    ws.connect();
+    const unsub = ws.on('antrean:updated', () => {
+      fetchData();
+    });
+    return () => unsub();
+  }, []);
+
   return (
     <SafeAreaView style={s.safeArea}>
       <View style={s.flex}>
@@ -127,8 +165,11 @@ export function QueueTicketScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Header />
-          <LiveTicket />
-          <StatusGrid />
+          <LiveTicket antrean={antrean} />
+          <StatusGrid
+            sedangDilayani={currentServing ?? '---'}
+            estimasi={estWaitLabel}
+          />
           <CheckinSection />
           <View style={s.spacer} />
         </ScrollView>

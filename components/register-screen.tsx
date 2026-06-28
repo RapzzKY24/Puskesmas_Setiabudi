@@ -21,6 +21,7 @@ import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { api } from '@/lib/api';
 
 const C = {
   primary: '#0d9488',
@@ -181,8 +182,17 @@ export function RegisterScreen() {
   );
 
   const onSubmit = useCallback(
-    (data: RegFormData) => {
-      router.push('/otp');
+    async (data: RegFormData) => {
+      try {
+        await api.post('/api/auth/register', {
+          identifier: data.identifier,
+          password: data.password,
+        });
+        router.push({ pathname: '/otp', params: { identifier: data.identifier } });
+      } catch (err: any) {
+        const msg = err.response?.data?.message || 'Registrasi gagal';
+        alert(msg);
+      }
     },
     [router],
   );

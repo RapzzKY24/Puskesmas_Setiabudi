@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,10 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { BottomNav } from './bottom-nav';
+import { api } from '@/lib/api';
+import { ws } from '@/lib/websocket-client';
+import { useAuthStore } from '@/lib/auth-store';
+import type { Poli, Antrean, Promo, QueueInfo } from '@/types/api';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const CARD_W = SCREEN_W - 48;
@@ -40,31 +44,7 @@ const C = {
   navInactive: '#64748b',
 } as const;
 
-const PROMOS = [
-  {
-    title: 'Vaksinasi Flu',
-    desc: 'Dapatkan perlindungan dari virus influenza dengan vaksinasi terbaru.',
-    badge: 'Available At Setiabudi Puskesmas',
-    colors: ['#e0f2fe', '#bae6fd'],
-    icon: 'medkit-outline' as const,
-  },
-  {
-    title: 'Influenza Vaccination',
-    desc: 'Flu vaccination for adults and children. Stay protected this season.',
-    badge: 'Available At Setiabudi Puskesmas',
-    colors: ['#ccfbf1', '#99f6e4'],
-    icon: 'fitness-outline' as const,
-  },
-  {
-    title: 'Cek Kesehatan Gratis',
-    desc: 'Pemeriksaan tekanan darah, gula darah, dan kolesterol gratis.',
-    badge: 'Available At All Branches',
-    colors: ['#fef3c7', '#fde68a'],
-    icon: 'pulse-outline' as const,
-  },
-];
-
-function TopBar() {
+function TopBar({ nama }: { nama: string }) {
   const router = useRouter();
   return (
     <View style={s.topBar}>
@@ -74,7 +54,7 @@ function TopBar() {
         </View>
         <View>
           <Text style={s.greeting}>Halo , Selamat Datang</Text>
-          <Text style={s.userName}>Lexa 👋</Text>
+          <Text style={s.userName}>{nama} 👋</Text>
         </View>
       </View>
       <TouchableOpacity
@@ -127,7 +107,7 @@ function HeroSection() {
   );
 }
 
-function PromoCarousel() {
+function PromoCarousel({ promos }: { promos: Promo[] }) {
   const scrollRef = useRef<ScrollView>(null);
   const scrollX = useSharedValue(0);
 
@@ -148,16 +128,16 @@ function PromoCarousel() {
         onScroll={handleScroll}
         scrollEventThrottle={16}
       >
-        {PROMOS.map((item, idx) => (
+        {promos.map((item, idx) => (
           <Animated.View
-            key={idx}
+            key={item.id}
             entering={FadeInRight.duration(350).delay(idx * 100)}
           >
             <TouchableOpacity activeOpacity={0.85} style={s.promoCard}>
               <View
                 style={[
                   s.promoInner,
-                  { backgroundColor: item.colors[0] },
+                  { backgroundColor: item.color1 },
                 ]}
               >
                 <View style={s.promoInfo}>
@@ -176,7 +156,7 @@ function PromoCarousel() {
                 </View>
                 <View style={s.promoIllus}>
                   <Ionicons
-                    name={item.icon}
+                    name={item.icon as any}
                     size={36}
                     color={C.primaryLight}
                   />
@@ -190,7 +170,15 @@ function PromoCarousel() {
   );
 }
 
-function QueueSection() {
+function QueueSection({ queueInfo }: { queueInfo: QueueInfo | null }) {
+  const antrean = queueInfo?.antrean;
+  const poliName = antrean?.poli?.name ?? 'Poli Jantung';
+  const queueNum = antrean?.nomor ?? '9';
+  const queueAhead = queueInfo?.queueAhead ?? 0;
+  const estWaitLabel = queueInfo?.estWaitLabel ?? '< 1 Menit';
+
+  if (!antrean) return null;
+
   return (
     <View style={s.queueSection}>
       <View style={s.sectionHeader}>
@@ -208,9 +196,9 @@ function QueueSection() {
       >
         <View style={s.queueTop}>
           <View style={s.queueInfo}>
-            <Text style={s.queuePoli}>Poli Jantung</Text>
+            <Text style={s.queuePoli}>{poliName}</Text>
             <Text style={s.queueStatus}>
-              Anda Sekarang Menunggu Sekitar 2 antrean lagi
+              Anda menunggu {queueAhead} antrean lagi &middot; {estWaitLabel}
             </Text>
           </View>
           <View style={s.queueNumWrap}>
@@ -218,7 +206,7 @@ function QueueSection() {
               <Text style={s.queueNumLabel}>No</Text>
             </View>
             <View style={s.queueNumBody}>
-              <Text style={s.queueNumValue}>9</Text>
+              <Text style={s.queueNumValue}>{queueNum}</Text>
             </View>
           </View>
         </View>
@@ -240,18 +228,48 @@ function QueueSection() {
 }
 
 export function DashboardScreen() {
+  const user = useAuthStore((s) => s.user);
+  const nama = user?.nama ?? 'Lexa';
+  const [queueInfo, setQueueInfo] = useState<QueueInfo | null>(null);
+  const [, setPoliList] = useState<Poli[]>([]);
+  const [promos, setPromos] = useState<Promo[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [poliRes, promosRes, queueRes] = await Promise.all([
+          api.get<Poli[]>('/api/poli'),
+          api.get<Promo[]>('/api/promos'),
+          api.get<QueueInfo>('/api/antrean/me'),
+        ]);
+        setPoliList(poliRes.data);
+        setPromos(promosRes.data);
+        setQueueInfo(queueRes.data);
+      } catch (err) {
+        console.error('Dashboard fetch error', err);
+      }
+    };
+    fetchData();
+
+    ws.connect();
+    const unsub = ws.on('antrean:updated', () => {
+      fetchData();
+    });
+    return () => unsub();
+  }, []);
+
   return (
     <SafeAreaView style={s.safeArea}>
       <View style={s.flex}>
-        <TopBar />
+        <TopBar nama={nama} />
         <ScrollView
           style={s.flex}
           contentContainerStyle={s.scrollContent}
           showsVerticalScrollIndicator={false}
         >
           <HeroSection />
-          <PromoCarousel />
-          <QueueSection />
+          <PromoCarousel promos={promos} />
+          <QueueSection queueInfo={queueInfo} />
           <View style={s.bottomSpacer} />
         </ScrollView>
         <BottomNav />

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,11 +6,13 @@ import {
   StyleSheet,
   ScrollView,
   SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { BottomNav } from './bottom-nav';
+import { api } from '@/lib/api';
 
 const C = {
   primary: '#0d9488',
@@ -26,6 +28,8 @@ const C = {
   successText: '#166534',
   dangerBg: '#fef2f2',
   dangerText: '#991b1b',
+  waitingBg: '#fef3c7',
+  waitingText: '#92400e',
 };
 
 interface HistoryItem {
@@ -33,19 +37,9 @@ interface HistoryItem {
   poliName: string;
   date: string;
   time: string;
-  status: 'SELESAI' | 'BATAL';
+  status: 'WAITING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 }
 
-const HISTORY_DATA: HistoryItem[] = [
-  { id: '1', poliName: 'Poli Kesehatan Gigi', date: '28 Sep 2025', time: '10:45 WIB', status: 'SELESAI' },
-  { id: '2', poliName: 'Poli Penyakit Kulit', date: '15 Sep 2025', time: '09:30 WIB', status: 'SELESAI' },
-  { id: '3', poliName: 'Poli Anak', date: '02 Sep 2025', time: '11:00 WIB', status: 'SELESAI' },
-  { id: '4', poliName: 'Poli THT', date: '20 Agu 2025', time: '08:15 WIB', status: 'SELESAI' },
-  { id: '5', poliName: 'Poli Jantung', date: '10 Agu 2025', time: '13:00 WIB', status: 'BATAL' },
-  { id: '6', poliName: 'Poli Mata', date: '28 Jul 2025', time: '10:00 WIB', status: 'SELESAI' },
-  { id: '7', poliName: 'Poli Umum', date: '15 Jul 2025', time: '07:30 WIB', status: 'SELESAI' },
-  { id: '8', poliName: 'Poli Kandungan & Kebidanan', date: '01 Jul 2025', time: '09:45 WIB', status: 'SELESAI' },
-];
 
 function Header() {
   return (
@@ -59,8 +53,13 @@ function Header() {
 }
 
 function HistoryCard({ item, index }: { item: HistoryItem; index: number }) {
-  const isSelesai = item.status === 'SELESAI';
+  const isSelesai = item.status === 'COMPLETED';
+  const isBatal = item.status === 'CANCELLED';
+  const isMenunggu = item.status === 'WAITING' || item.status === 'IN_PROGRESS';
   const router = useRouter();
+
+  const badgeStyle = isSelesai ? s.badgeSelesai : isBatal ? s.badgeBatal : s.badgeMenunggu;
+  const textStyle = isSelesai ? s.statusSelesai : isBatal ? s.statusBatal : s.statusMenunggu;
 
   return (
     <Animated.View
@@ -71,16 +70,18 @@ function HistoryCard({ item, index }: { item: HistoryItem; index: number }) {
           <View
             style={[
               s.statusBadge,
-              isSelesai ? s.badgeSelesai : s.badgeBatal,
+              badgeStyle,
             ]}
           >
             <Text
               style={[
                 s.statusText,
-                isSelesai ? s.statusSelesai : s.statusBatal,
+                textStyle,
               ]}
             >
-              {item.status}
+              {item.status === 'COMPLETED' ? 'SELESAI' :
+               item.status === 'CANCELLED' ? 'BATAL' :
+               item.status === 'WAITING' ? 'MENUNGGU' : 'DIPROSES'}
             </Text>
           </View>
           <View style={s.dateWrap}>
@@ -95,7 +96,7 @@ function HistoryCard({ item, index }: { item: HistoryItem; index: number }) {
           <TouchableOpacity
             style={s.resumeBtn}
             activeOpacity={0.85}
-            onPress={() => router.push('/(app)/e-resume')}
+            onPress={() => router.push({ pathname: '/(app)/e-resume', params: { appointmentId: item.id } })}
           >
             <Ionicons
               name="document-text-outline"
@@ -110,17 +111,21 @@ function HistoryCard({ item, index }: { item: HistoryItem; index: number }) {
   );
 }
 
-function HistoryList() {
-  return (
-    <View style={s.listSection}>
-      {HISTORY_DATA.map((item, idx) => (
-        <HistoryCard key={item.id} item={item} index={idx} />
-      ))}
-    </View>
-  );
-}
-
 export function HistoryScreen() {
+  const [items, setItems] = useState<HistoryItem[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await api.get<HistoryItem[]>('/api/history');
+        setItems(res.data);
+      } catch (err) {
+        console.error('History fetch error', err);
+      }
+    };
+    fetchData();
+  }, []);
+
   return (
     <SafeAreaView style={s.safeArea}>
       <View style={s.flex}>
@@ -130,7 +135,15 @@ export function HistoryScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Header />
-          <HistoryList />
+          <View style={s.listSection}>
+            {items.length === 0 ? (
+              <ActivityIndicator size="large" color={C.primary} style={s.loading} />
+            ) : (
+              items.map((item, idx) => (
+                <HistoryCard key={item.id} item={item} index={idx} />
+              ))
+            )}
+          </View>
           <View style={s.spacer} />
         </ScrollView>
         <BottomNav />
@@ -180,9 +193,11 @@ const s = StyleSheet.create({
   },
   badgeSelesai: { backgroundColor: C.successBg },
   badgeBatal: { backgroundColor: C.dangerBg },
+  badgeMenunggu: { backgroundColor: C.waitingBg },
   statusText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
   statusSelesai: { color: C.successText },
   statusBatal: { color: C.dangerText },
+  statusMenunggu: { color: C.waitingText },
   dateWrap: { alignItems: 'flex-end', gap: 1 },
   dateText: { fontSize: 13, fontWeight: '600', color: C.text },
   timeText: { fontSize: 12, color: C.textMuted },
@@ -206,4 +221,5 @@ const s = StyleSheet.create({
   resumeText: { fontSize: 14, fontWeight: '700', color: '#fff' },
 
   spacer: { height: 20 },
+  loading: { marginTop: 40 },
 });

@@ -7,6 +7,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, usePathname } from 'expo-router';
+import { useAuthStore } from '@/lib/auth-store';
 
 const C = {
   primary: '#0d9488',
@@ -16,18 +17,29 @@ const C = {
   navInactive: '#64748b',
 };
 
-type NavRoute = '/(app)' | '/(app)/antrean' | '/(app)/history';
+type NavRoute = '/(app)' | '/(app)/antrean' | '/(app)/history' | '/(app)/admin';
 
-const ITEMS: {
+function getItems(isAdmin: boolean): {
   route: NavRoute;
   icon: keyof typeof Ionicons.glyphMap;
   iconActive: keyof typeof Ionicons.glyphMap;
   label: string;
-}[] = [
-  { route: '/(app)', icon: 'home-outline', iconActive: 'home', label: 'Beranda' },
-  { route: '/(app)/antrean', icon: 'list-outline', iconActive: 'list', label: 'Antrean' },
-  { route: '/(app)/history', icon: 'time-outline', iconActive: 'time', label: 'Riwayat' },
-];
+}[] {
+  const items: {
+    route: NavRoute;
+    icon: keyof typeof Ionicons.glyphMap;
+    iconActive: keyof typeof Ionicons.glyphMap;
+    label: string;
+  }[] = [
+    { route: '/(app)', icon: 'home-outline', iconActive: 'home', label: 'Beranda' },
+    { route: '/(app)/antrean', icon: 'list-outline', iconActive: 'list', label: 'Antrean' },
+    { route: '/(app)/history', icon: 'time-outline', iconActive: 'time', label: 'Riwayat' },
+  ];
+  if (isAdmin) {
+    items.push({ route: '/(app)/admin', icon: 'settings-outline', iconActive: 'settings', label: 'Admin' });
+  }
+  return items;
+}
 
 function NavItem({
   route,
@@ -72,6 +84,7 @@ function NavItem({
 }
 
 function getActiveRoute(pathname: string): string {
+  if (pathname.includes('/admin')) return '/(app)/admin';
   if (pathname.includes('/antrean')) return '/(app)/antrean';
   if (pathname.includes('/history')) return '/(app)/history';
   return '/(app)';
@@ -80,7 +93,10 @@ function getActiveRoute(pathname: string): string {
 export function BottomNav() {
   const router = useRouter();
   const pathname = usePathname();
+  const role = useAuthStore((s) => s.user?.role);
+  const isAdmin = role === 'ADMIN';
   const activeRoute = getActiveRoute(pathname);
+  const ITEMS = getItems(isAdmin);
 
   const handlePress = useCallback(
     (route: string) => {

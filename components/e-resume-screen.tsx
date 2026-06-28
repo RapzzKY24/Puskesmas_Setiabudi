@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,14 @@ import {
   ScrollView,
   SafeAreaView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { BottomNav } from './bottom-nav';
+import { api } from '@/lib/api';
+import type { EResume } from '@/types/api';
 
 const C = {
   primary: '#0d9488',
@@ -52,7 +55,11 @@ function TopBar() {
   );
 }
 
-function SummaryCard() {
+function SummaryCard({ resume }: { resume: EResume }) {
+  const appointment = resume.appointment;
+  const status = appointment?.status ?? 'COMPLETED';
+  const dateStr = appointment?.tanggal ?? '-';
+  const poliName = appointment?.poli?.name ?? '-';
   return (
     <Animated.View
       entering={FadeInDown.duration(400).springify()}
@@ -60,128 +67,141 @@ function SummaryCard() {
     >
       <View style={s.summaryTop}>
         <View style={s.statusBadge}>
-          <Text style={s.statusText}>SELESAI</Text>
+          <Text style={s.statusText}>{status}</Text>
         </View>
-        <Text style={s.summaryDate}>28 Sep 2025 , 10.45</Text>
+        <View style={s.summaryDate}>
+          <Ionicons name="calendar-outline" size={14} color={C.textMuted} />
+          <Text style={s.summaryDateText}>{dateStr}</Text>
+        </View>
       </View>
-      <Text style={s.summaryPoli}>Poli Kesehatan Gigi</Text>
+
+      <View style={s.summaryRow}>
+        <Ionicons name="medical-outline" size={16} color={C.primary} />
+        <Text style={s.summaryLabel}>Poli Tujuan</Text>
+        <Text style={s.summaryValue}>{poliName}</Text>
+      </View>
     </Animated.View>
   );
 }
 
-function RingkasanSection() {
+function DiagnosaCard({ diagnosa, deskripsi }: { diagnosa?: string | null; deskripsi?: string | null }) {
+  if (!diagnosa && !deskripsi) return null;
   return (
-    <View style={s.section}>
-      <View style={s.sectionHeader}>
+    <Animated.View
+      entering={FadeInDown.duration(400).delay(80).springify()}
+      style={s.diagCard}
+    >
+      <View style={s.diagHeader}>
         <Ionicons name="document-text-outline" size={18} color={C.primary} />
-        <Text style={s.sectionTitle}>RINGKASAN</Text>
+        <Text style={s.diagHeaderTitle}>HASIL PEMERIKSAAN</Text>
       </View>
-      <View style={s.ringkasanCard}>
-        <RingkasanItem
-          icon="calendar-outline"
-          label="TANGGAL KUNJUNGAN"
-          value="28 SEPTEMBER 2025 , 10.45"
-        />
-        <RingkasanItem
-          icon="business-outline"
-          label="POLI"
-          value="Poli Kesehatan Gigi"
-        />
-        <RingkasanItem
-          icon="chatbubble-ellipses-outline"
-          label="KELUHAN"
-          value="Sakit Gigi Sejak 2 Hari Lalu"
-          isLast
-        />
-      </View>
-    </View>
+      {diagnosa ? (
+        <View style={s.diagRow}>
+          <Text style={s.diagLabel}>Diagnosa</Text>
+          <Text style={s.diagValue}>{diagnosa}</Text>
+        </View>
+      ) : null}
+      {deskripsi ? (
+        <View style={s.diagRow}>
+          <Text style={s.diagLabel}>Deskripsi</Text>
+          <Text style={s.diagValue}>{deskripsi}</Text>
+        </View>
+      ) : null}
+    </Animated.View>
   );
 }
 
-function RingkasanItem({
-  icon,
-  label,
-  value,
-  isLast,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  value: string;
-  isLast?: boolean;
-}) {
+function ObatCard({ obat }: { obat: { name: string; rule: string }[] }) {
+  if (obat.length === 0) return null;
   return (
-    <>
-      <View style={s.ringkasanRow}>
-        <View style={s.ringkasanIcon}>
-          <Ionicons name={icon} size={18} color={C.primary} />
-        </View>
-        <View style={s.ringkasanBody}>
-          <Text style={s.ringkasanLabel}>{label}</Text>
-          <Text style={s.ringkasanValue}>{value}</Text>
-        </View>
-      </View>
-      {!isLast && <View style={s.ringkasanDivider} />}
-    </>
-  );
-}
-
-function DiagnosaSection() {
-  return (
-    <View style={s.section}>
-      <View style={s.sectionHeader}>
-        <Ionicons name="fitness-outline" size={18} color={C.primary} />
-        <Text style={s.sectionTitle}>DIAGNOSA</Text>
-      </View>
-      <Animated.View
-        entering={FadeInDown.duration(400).delay(100).springify()}
-        style={s.diagCard}
-      >
-        <View style={s.diagContent}>
-          <Text style={s.diagTitle}>Karies Gigi (K02.9)</Text>
-          <Text style={s.diagDesc}>Karies Geraham Kanan Bawah Berlubang.</Text>
-        </View>
-        <TouchableOpacity style={s.diagBtn} activeOpacity={0.8}>
-          <Text style={s.diagBtnText}>Lihat Detail</Text>
-        </TouchableOpacity>
-      </Animated.View>
-    </View>
-  );
-}
-
-function ResepSection() {
-  const obatList = [
-    { name: 'Amoxicilin 500mg', rule: '3x1 setelah makan' },
-    { name: 'Ibu Profen 400mg', rule: '2x1 saat nyeri' },
-  ];
-
-  return (
-    <View style={s.section}>
-      <View style={s.sectionHeader}>
+    <Animated.View
+      entering={FadeInDown.duration(400).delay(160).springify()}
+      style={s.obatCard}
+    >
+      <View style={s.obatHeader}>
         <Ionicons name="medkit-outline" size={18} color={C.primary} />
-        <Text style={s.sectionTitle}>RESEP OBAT</Text>
+        <Text style={s.obatHeaderTitle}>RESEP OBAT</Text>
       </View>
-      <View style={s.obatList}>
-        {obatList.map((obat, idx) => (
-          <Animated.View
-            key={idx}
-            entering={FadeIn.duration(300).delay(150 + idx * 80)}
-            style={s.obatCard}
-          >
-            <View style={s.obatIcon}>
-              <Ionicons name="ellipse-outline" size={20} color={C.primary} />
-            </View>
-            <View style={s.obatBody}>
-              <Text style={s.obatName}>{obat.name}</Text>
-              <Text style={s.obatRule}>{obat.rule}</Text>
-            </View>
-          </Animated.View>
-        ))}
+      {obat.map((o, idx) => (
+        <View
+          key={idx}
+          style={[s.obatRow, idx === obat.length - 1 && s.obatRowLast]}
+        >
+          <View style={s.obatBullet}>
+            <Text style={s.obatBulletText}>{idx + 1}</Text>
+          </View>
+          <View style={s.obatBody}>
+            <Text style={s.obatName}>{o.name}</Text>
+            <Text style={s.obatRule}>{o.rule}</Text>
+          </View>
+        </View>
+      ))}
+    </Animated.View>
+  );
+}
+
+function DisclaimerCard() {
+  return (
+    <Animated.View
+      entering={FadeInDown.duration(400).delay(240).springify()}
+      style={s.discCard}
+    >
+      <View style={s.discLeft}>
+        <Ionicons name="information-circle-outline" size={22} color={C.primary} />
       </View>
-    </View>
+      <View style={s.discBody}>
+        <Text style={s.discTitle}>INFORMASI PENTING</Text>
+        <Text style={s.discDesc}>
+          E-Resume ini bersifat informatif. Konsultasikan dengan dokter atau
+          petugas kesehatan untuk penanganan lebih lanjut.
+        </Text>
+      </View>
+    </Animated.View>
   );
 }
 
 export function EResumeScreen() {
+  const { appointmentId } = useLocalSearchParams<{ appointmentId: string }>();
+  const [resume, setResume] = useState<EResume | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!appointmentId) return;
+    api.get<EResume>(`/api/e-resume/by-appointment/${appointmentId}`)
+      .then((res) => setResume(res.data))
+      .catch(() => setResume(null))
+      .finally(() => setLoading(false));
+  }, [appointmentId]);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={s.safeArea}>
+        <View style={s.flex}>
+          <TopBar />
+          <View style={s.center}>
+            <ActivityIndicator size="large" color={C.primary} />
+          </View>
+          <BottomNav />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!resume) {
+    return (
+      <SafeAreaView style={s.safeArea}>
+        <View style={s.flex}>
+          <TopBar />
+          <View style={s.center}>
+            <Ionicons name="document-outline" size={48} color={C.textMuted} />
+            <Text style={s.emptyText}>E-Resume tidak ditemukan</Text>
+          </View>
+          <BottomNav />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={s.safeArea}>
       <View style={s.flex}>
@@ -191,10 +211,10 @@ export function EResumeScreen() {
           contentContainerStyle={s.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <SummaryCard />
-          <RingkasanSection />
-          <DiagnosaSection />
-          <ResepSection />
+          <SummaryCard resume={resume} />
+          <DiagnosaCard diagnosa={resume.diagnosa} deskripsi={resume.deskripsi} />
+          <ObatCard obat={resume.obat} />
+          <DisclaimerCard />
           <View style={s.spacer} />
         </ScrollView>
         <BottomNav />
@@ -206,6 +226,8 @@ export function EResumeScreen() {
 const s = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: C.background },
   flex: { flex: 1 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  emptyText: { fontSize: 15, color: C.textMuted },
   scrollContent: { paddingBottom: 8 },
 
   topBar: {
@@ -229,19 +251,19 @@ const s = StyleSheet.create({
     backgroundColor: C.card,
     borderRadius: 20,
     marginHorizontal: 20,
-    marginTop: 20,
+    marginTop: 16,
     padding: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
   },
   summaryTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 14,
   },
   statusBadge: {
     backgroundColor: C.successBg,
@@ -249,104 +271,67 @@ const s = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 5,
   },
-  statusText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: C.successText,
-    letterSpacing: 0.5,
-  },
-  summaryDate: { fontSize: 13, color: C.textMuted },
-  summaryPoli: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: C.text,
-  },
-
-  section: { paddingHorizontal: 20, marginTop: 24 },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: C.primary,
-    letterSpacing: 0.6,
-  },
-
-  ringkasanCard: {
-    backgroundColor: C.card,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  ringkasanRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    gap: 14,
-  },
-  ringkasanIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: C.primaryBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ringkasanBody: { flex: 1, gap: 2 },
-  ringkasanLabel: { fontSize: 11, fontWeight: '500', color: C.textMuted },
-  ringkasanValue: { fontSize: 14, fontWeight: '600', color: C.text },
-  ringkasanDivider: {
-    height: 1,
-    backgroundColor: C.border,
-    marginLeft: 68,
-  },
+  statusText: { fontSize: 11, fontWeight: '700', color: C.successText, letterSpacing: 0.5 },
+  summaryDate: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  summaryDateText: { fontSize: 12, color: C.textMuted },
+  summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  summaryLabel: { fontSize: 13, color: C.textSecondary },
+  summaryValue: { fontSize: 13, fontWeight: '700', color: C.text, marginLeft: 'auto' },
 
   diagCard: {
-    flexDirection: 'row',
-    backgroundColor: C.diagBg,
-    borderRadius: 16,
-    padding: 18,
-    alignItems: 'center',
-    gap: 12,
-  },
-  diagContent: { flex: 1, gap: 4 },
-  diagTitle: { fontSize: 15, fontWeight: '700', color: C.primaryDark },
-  diagDesc: { fontSize: 13, color: C.textSecondary, lineHeight: 18 },
-  diagBtn: {
-    backgroundColor: C.successBg,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  diagBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: C.successText,
-  },
-
-  obatList: { gap: 10 },
-  obatCard: {
-    flexDirection: 'row',
     backgroundColor: C.card,
-    borderRadius: 14,
-    padding: 16,
-    gap: 14,
-    alignItems: 'center',
+    borderRadius: 20,
+    marginHorizontal: 20,
+    marginTop: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  obatIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: C.primaryBg,
-    alignItems: 'center',
-    justifyContent: 'center',
+  diagHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
+  diagHeaderTitle: { fontSize: 14, fontWeight: '700', color: C.primary, letterSpacing: 0.5 },
+  diagRow: { marginBottom: 12 },
+  diagLabel: { fontSize: 12, fontWeight: '600', color: C.textMuted, marginBottom: 4 },
+  diagValue: { fontSize: 15, fontWeight: '600', color: C.text, lineHeight: 22, backgroundColor: C.diagBg, borderRadius: 12, padding: 12 },
+
+  obatCard: {
+    backgroundColor: C.card,
+    borderRadius: 20,
+    marginHorizontal: 20,
+    marginTop: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
   },
+  obatHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
+  obatHeaderTitle: { fontSize: 14, fontWeight: '700', color: C.primary, letterSpacing: 0.5 },
+  obatRow: { flexDirection: 'row', gap: 12, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.border },
+  obatRowLast: { borderBottomWidth: 0 },
+  obatBullet: { width: 24, height: 24, borderRadius: 12, backgroundColor: C.primaryBg, alignItems: 'center', justifyContent: 'center' },
+  obatBulletText: { fontSize: 12, fontWeight: '700', color: C.primary },
   obatBody: { flex: 1, gap: 2 },
   obatName: { fontSize: 15, fontWeight: '600', color: C.text },
-  obatRule: { fontSize: 13, color: C.textMuted },
+  obatRule: { fontSize: 13, color: C.textSecondary },
+
+  discCard: {
+    flexDirection: 'row',
+    backgroundColor: C.primaryBgLight,
+    borderRadius: 18,
+    marginHorizontal: 20,
+    marginTop: 16,
+    padding: 16,
+    gap: 14,
+    alignItems: 'flex-start',
+  },
+  discLeft: { paddingTop: 2 },
+  discBody: { flex: 1, gap: 4 },
+  discTitle: { fontSize: 13, fontWeight: '700', color: C.primaryDark },
+  discDesc: { fontSize: 12, color: C.textSecondary, lineHeight: 18 },
 
   spacer: { height: 20 },
 });

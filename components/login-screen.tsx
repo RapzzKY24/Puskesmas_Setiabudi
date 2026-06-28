@@ -21,6 +21,8 @@ import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { api } from '@/lib/api';
+import { useAuthStore } from '@/lib/auth-store';
 
 const C = {
   primary: '#0d9488',
@@ -177,9 +179,16 @@ export function LoginScreen() {
 
   const router = useRouter();
 
-  const onSubmit = useCallback((data: LoginFormData) => {
-    // handle login
-  }, []);
+  const onSubmit = useCallback(async (data: LoginFormData) => {
+    try {
+      const res = await api.post('/api/auth/login', data);
+      useAuthStore.getState().login(res.data.token, res.data.user);
+      router.replace('/(app)');
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Login gagal, coba lagi';
+      alert(msg);
+    }
+  }, [router]);
 
   const btnAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: btnScale.value }],

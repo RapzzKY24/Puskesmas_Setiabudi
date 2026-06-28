@@ -1,0 +1,18 @@
+-- Rename AppointmentStatus enum values
+ALTER TYPE "AppointmentStatus" RENAME VALUE 'MENUNGGU' TO 'WAITING';
+ALTER TYPE "AppointmentStatus" RENAME VALUE 'DIPROSES' TO 'IN_PROGRESS';
+ALTER TYPE "AppointmentStatus" RENAME VALUE 'SELESAI' TO 'COMPLETED';
+ALTER TYPE "AppointmentStatus" RENAME VALUE 'BATAL' TO 'CANCELLED';
+
+-- Rename AntreanStatus enum values
+ALTER TYPE "AntreanStatus" RENAME VALUE 'MENUNGGU' TO 'WAITING';
+ALTER TYPE "AntreanStatus" RENAME VALUE 'DIPANGGIL' TO 'CALLED';
+ALTER TYPE "AntreanStatus" RENAME VALUE 'DILAYANI' TO 'IN_SERVICE';
+ALTER TYPE "AntreanStatus" RENAME VALUE 'SELESAI' TO 'COMPLETED';
+ALTER TYPE "AntreanStatus" RENAME VALUE 'TERLEWAT' TO 'NO_SHOW';
+
+-- Add timestamp columns to Antrean
+ALTER TABLE "Antrean" ADD COLUMN "calledAt" TIMESTAMP(3);
+ALTER TABLE "Antrean" ADD COLUMN "serviceStartedAt" TIMESTAMP(3);
+ALTER TABLE "Antrean" ADD COLUMN "completedAt" TIMESTAMP(3);
+ALTER TABLE "Antrean" ADD COLUMN "cancelledAt" TIMESTAMP(3);

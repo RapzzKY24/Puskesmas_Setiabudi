@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +19,8 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { BottomNav } from './bottom-nav';
 import { ConfirmModal } from './confirm-modal';
+import { api } from '@/lib/api';
+import { useAuthStore } from '@/lib/auth-store';
 
 const C = {
   primary: '#0d9488',
@@ -36,6 +39,8 @@ const C = {
   successText: '#166534',
   danger: '#ef4444',
   dangerBg: '#fef2f2',
+  orangeBg: '#fff7ed',
+  orangeText: '#9a3412',
 };
 
 const schema = z.object({
@@ -67,10 +72,16 @@ function BackHeader() {
 function SummaryCard({
   poliName,
   dateLabel,
+  queueCount,
+  estWait,
 }: {
   poliName: string;
   dateLabel: string;
+  queueCount: number;
+  estWait: number;
 }) {
+  const estWaitTotal = queueCount * estWait;
+
   return (
     <Animated.View
       entering={FadeInDown.duration(400).springify()}
@@ -103,6 +114,23 @@ function SummaryCard({
           <Text style={s.summaryGridText}>09.00 - 14.00</Text>
         </View>
       </View>
+
+      {queueCount > 0 && (
+        <View style={s.queuePositionWrap}>
+          <View style={s.queuePositionRow}>
+            <Ionicons name="layers-outline" size={14} color={C.orangeText} />
+            <Text style={s.queuePositionLabel}>
+              Posisi Antrean saat ini: <Text style={s.queuePositionBold}>{queueCount + 1}</Text> dari {queueCount + 1}
+            </Text>
+          </View>
+          <View style={s.queuePositionRow}>
+            <Ionicons name="hourglass-outline" size={14} color={C.orangeText} />
+            <Text style={s.queuePositionLabel}>
+              Estimasi Waktu: <Text style={s.queuePositionBold}>~{estWaitTotal} Menit</Text>
+            </Text>
+          </View>
+        </View>
+      )}
     </Animated.View>
   );
 }
@@ -129,7 +157,7 @@ function PatientDataField({
   );
 }
 
-function PatientSection() {
+function PatientSection({ user }: { user: { nik?: string | null; nama?: string | null; noHp?: string | null } }) {
   return (
     <View style={s.section}>
       <Text style={s.sectionTitle}>DATA PASIEN</Text>
@@ -137,19 +165,19 @@ function PatientSection() {
         <PatientDataField
           icon="card-outline"
           label="NIK"
-          value="1372030430420420"
+          value={user.nik || '-'}
         />
         <View style={s.patientDivider} />
         <PatientDataField
           icon="person-outline"
           label="Nama Lengkap"
-          value="Lexa Namiko Premasta"
+          value={user.nama || '-'}
         />
         <View style={s.patientDivider} />
         <PatientDataField
           icon="call-outline"
           label="Nomor Hp"
-          value="0895-0862-7182"
+          value={user.noHp || '-'}
         />
       </View>
     </View>
@@ -160,16 +188,27 @@ export function AppointmentScreen() {
   const [showConfirm, setShowConfirm] = useState(false);
   const router = useRouter();
   const params = useLocalSearchParams<{
+    poliId: string;
     poliName: string;
     dateLabel: string;
+    dateISO: string;
+    queueCount?: string;
+    estWait?: string;
   }>();
 
+  const user = useAuthStore((s) => s.user);
+
+  const poliId = params.poliId ?? '';
   const poliName = params.poliName ?? 'Poli Kesehatan Gigi';
   const dateLabel = params.dateLabel ?? 'SELASA, 15 MARET 2026';
+  const tanggal = params.dateISO ?? new Date().toISOString();
+  const queueCount = Number(params.queueCount ?? 0);
+  const estWait = Number(params.estWait ?? 0);
 
   const {
     control,
     handleSubmit,
+    getValues,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -183,10 +222,20 @@ export function AppointmentScreen() {
     [],
   );
 
-  const handleConfirm = useCallback(() => {
+  const handleConfirm = useCallback(async () => {
     setShowConfirm(false);
-    router.replace('/antrean');
-  }, [router]);
+    const keluhan = getValues('keluhan');
+    try {
+      await api.post('/api/appointments', {
+        poliId,
+        tanggal: new Date(tanggal).toISOString(),
+        keluhan,
+      });
+      router.replace('/antrean');
+    } catch {
+      Alert.alert('Gagal', 'Gagal membuat janji temu. Silakan coba lagi.');
+    }
+  }, [poliId, tanggal, router, getValues]);
 
   return (
     <SafeAreaView style={s.safeArea}>
@@ -203,8 +252,8 @@ export function AppointmentScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            <SummaryCard poliName={poliName} dateLabel={dateLabel} />
-            <PatientSection />
+            <SummaryCard poliName={poliName} dateLabel={dateLabel} queueCount={queueCount} estWait={estWait} />
+            <PatientSection user={user ?? {}} />
 
             <View style={s.section}>
               <Text style={s.sectionTitle}>KELUHAN</Text>
@@ -362,6 +411,26 @@ const s = StyleSheet.create({
     fontWeight: '600',
     color: C.textSecondary,
     flexShrink: 1,
+  },
+
+  queuePositionWrap: {
+    marginTop: 14,
+    backgroundColor: '#fff7ed',
+    borderRadius: 12,
+    padding: 12,
+    gap: 8,
+  },
+  queuePositionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  queuePositionLabel: {
+    fontSize: 12,
+    color: '#9a3412',
+  },
+  queuePositionBold: {
+    fontWeight: '700',
   },
 
   section: { paddingHorizontal: 20, marginTop: 24 },

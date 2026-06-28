@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,13 @@ import {
   ScrollView,
   SafeAreaView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { BottomNav } from './bottom-nav';
+import { api } from '@/lib/api';
 
 const C = {
   primary: '#0d9488',
@@ -31,7 +33,7 @@ const C = {
 interface NotificationItem {
   id: string;
   group: 'hari-ini' | 'kemarin';
-  type: 'interactive' | 'info' | 'confirm';
+  type: 'info';
   icon: keyof typeof Ionicons.glyphMap;
   iconBg: string;
   category: string;
@@ -40,78 +42,8 @@ interface NotificationItem {
   title: string;
   description: string;
   accentBorder?: boolean;
-  actions?: { primary?: string; secondary?: string };
 }
 
-const NOTIF_DATA: NotificationItem[] = [
-  {
-    id: '1',
-    group: 'hari-ini',
-    type: 'interactive',
-    icon: 'notifications-outline',
-    iconBg: '#e0f2fe',
-    category: 'PANGGILAN ANTREAN',
-    categoryColor: C.primary,
-    time: '09:41',
-    title: 'Nomor Anda akan segera dipanggil',
-    description:
-      'Persiapkan diri Anda, nomor antrean A-12 sedang menuju giliran.',
-    actions: { primary: 'Lihat Tiket', secondary: 'Nanti' },
-  },
-  {
-    id: '2',
-    group: 'hari-ini',
-    type: 'info',
-    icon: 'walk-outline',
-    iconBg: '#e0f2fe',
-    category: 'PETUNJUK LOKASI',
-    categoryColor: C.accent,
-    time: '09:30',
-    title: 'Silakan menuju Poli Umum',
-    description:
-      'Lokasi Poli Umum berada di Lantai 2, Gedung B. Gunakan lift utama untuk akses lebih cepat.',
-    accentBorder: true,
-  },
-  {
-    id: '3',
-    group: 'hari-ini',
-    type: 'info',
-    icon: 'notifications-outline',
-    iconBg: '#fef3c7',
-    category: 'PENGINGAT',
-    categoryColor: '#d97706',
-    time: '08:00',
-    title: 'Jadwal kontrol bulan depan',
-    description:
-      'Jangan lupa jadwal kontrol Anda dengan dr. Siti pada 24 Nov 2025.',
-  },
-  {
-    id: '4',
-    group: 'kemarin',
-    type: 'confirm',
-    icon: 'calendar-outline',
-    iconBg: '#f1f5f9',
-    category: 'Konfirmasi',
-    categoryColor: C.textSecondary,
-    time: '14:20',
-    title: 'Jadwal Berhasil Dipesan',
-    description:
-      'Konsultasi dengan Dr. Siti Aminah pada 24 Okt.',
-  },
-  {
-    id: '5',
-    group: 'kemarin',
-    type: 'confirm',
-    icon: 'calendar-outline',
-    iconBg: '#f1f5f9',
-    category: 'Konfirmasi',
-    categoryColor: C.textSecondary,
-    time: '10:15',
-    title: 'Pendaftaran Berhasil',
-    description:
-      'Poli Kesehatan Gigi, 28 Sep 2025 pukul 10.45 WIB.',
-  },
-];
 
 function TopBar() {
   const router = useRouter();
@@ -146,7 +78,6 @@ function GroupHeader({
 }
 
 function NotifCard({ item, index }: { item: NotificationItem; index: number }) {
-  const router = useRouter();
   return (
     <Animated.View
       entering={FadeInDown.duration(300).delay(index * 60).springify()}
@@ -174,32 +105,6 @@ function NotifCard({ item, index }: { item: NotificationItem; index: number }) {
             </View>
             <Text style={s.cardTitle}>{item.title}</Text>
             <Text style={s.cardDesc}>{item.description}</Text>
-
-            {item.actions && (
-              <View style={s.actions}>
-                {item.actions.primary && (
-                  <TouchableOpacity
-                    style={s.actionPrimary}
-                    activeOpacity={0.85}
-                    onPress={() => router.push('/(app)/ticket-detail')}
-                  >
-                    <Text style={s.actionPrimaryText}>
-                      {item.actions.primary}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                {item.actions.secondary && (
-                  <TouchableOpacity
-                    style={s.actionSecondary}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={s.actionSecondaryText}>
-                      {item.actions.secondary}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
           </View>
         </View>
       </View>
@@ -208,8 +113,81 @@ function NotifCard({ item, index }: { item: NotificationItem; index: number }) {
 }
 
 export function NotificationsScreen() {
-  const todayItems = NOTIF_DATA.filter((n) => n.group === 'hari-ini');
-  const yesterdayItems = NOTIF_DATA.filter((n) => n.group === 'kemarin');
+  const [items, setItems] = useState<NotificationItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await api.get('/api/notifications');
+        const mapped: NotificationItem[] = (res.data ?? []).map(
+          (n: { id: string; type: string; category: string; categoryColor: string; title: string; description: string; icon: string; iconBg: string; accentBorder: boolean; createdAt: string }) => {
+            const date = new Date(n.createdAt);
+            const today = new Date();
+            const isToday =
+              date.getDate() === today.getDate() &&
+              date.getMonth() === today.getMonth() &&
+              date.getFullYear() === today.getFullYear();
+            return {
+              id: n.id,
+              group: isToday ? 'hari-ini' as const : 'kemarin' as const,
+              type: 'info' as const,
+              icon: (n.icon || 'notifications-outline') as keyof typeof Ionicons.glyphMap,
+              iconBg: n.iconBg,
+              category: n.category,
+              categoryColor: n.categoryColor,
+              time: date.toLocaleTimeString('id-ID', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+              }),
+              title: n.title,
+              description: n.description,
+              accentBorder: n.accentBorder,
+            };
+          },
+        );
+        setItems(mapped);
+      } catch (err) {
+        console.error('Notifications fetch error', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const todayItems = items.filter((n) => n.group === 'hari-ini');
+  const yesterdayItems = items.filter((n) => n.group === 'kemarin');
+
+  if (loading) {
+    return (
+      <SafeAreaView style={s.safeArea}>
+        <View style={s.flex}>
+          <TopBar />
+          <View style={s.loading}>
+            <ActivityIndicator size="large" color={C.primary} />
+          </View>
+          <BottomNav />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <SafeAreaView style={s.safeArea}>
+        <View style={s.flex}>
+          <TopBar />
+          <View style={s.loading}>
+            <Ionicons name="notifications-off-outline" size={48} color={C.textMuted} />
+            <Text style={s.emptyText}>Belum ada notifikasi</Text>
+          </View>
+          <BottomNav />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={s.safeArea}>
@@ -220,19 +198,27 @@ export function NotificationsScreen() {
           contentContainerStyle={s.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <GroupHeader label="HARI INI" count="3 Pesan Baru" />
-          {todayItems.map((item, idx) => (
-            <NotifCard key={item.id} item={item} index={idx} />
-          ))}
+          {todayItems.length > 0 && (
+            <>
+              <GroupHeader label="HARI INI" count={`${todayItems.length} Pesan Baru`} />
+              {todayItems.map((item, idx) => (
+                <NotifCard key={item.id} item={item} index={idx} />
+              ))}
+            </>
+          )}
 
-          <GroupHeader label="KEMARIN" />
-          {yesterdayItems.map((item, idx) => (
-            <NotifCard
-              key={item.id}
-              item={item}
-              index={todayItems.length + idx}
-            />
-          ))}
+          {yesterdayItems.length > 0 && (
+            <>
+              <GroupHeader label="KEMARIN" />
+              {yesterdayItems.map((item, idx) => (
+                <NotifCard
+                  key={item.id}
+                  item={item}
+                  index={todayItems.length + idx}
+                />
+              ))}
+            </>
+          )}
 
           <View style={s.spacer} />
         </ScrollView>
@@ -337,35 +323,7 @@ const s = StyleSheet.create({
     marginTop: 2,
   },
 
-  actions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 12,
-  },
-  actionPrimary: {
-    backgroundColor: C.primary,
-    borderRadius: 10,
-    paddingHorizontal: 18,
-    paddingVertical: 9,
-  },
-  actionPrimaryText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  actionSecondary: {
-    backgroundColor: C.background,
-    borderRadius: 10,
-    paddingHorizontal: 18,
-    paddingVertical: 9,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  actionSecondaryText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: C.textSecondary,
-  },
-
   spacer: { height: 20 },
+  loading: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  emptyText: { fontSize: 15, color: C.textMuted },
 });

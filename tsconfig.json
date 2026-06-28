@@ -8,6 +8,9 @@
       ]
     }
   },
+  "exclude": [
+    "backend"
+  ],
   "include": [
     "**/*.ts",
     "**/*.tsx",

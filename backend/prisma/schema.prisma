@@ -1,0 +1,148 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  PATIENT
+  ADMIN
+  DOCTOR
+}
+
+enum AppointmentStatus {
+  WAITING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum AntreanStatus {
+  WAITING
+  CALLED
+  IN_SERVICE
+  COMPLETED
+  NO_SHOW
+}
+
+model User {
+  id        String   @id @default(uuid())
+  nik       String?  @unique
+  nama      String?
+  noHp      String?  @unique
+  email     String?  @unique
+  password  String
+  role      Role     @default(PATIENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  appointments  Appointment[]
+  antrean       Antrean[]
+  eResumes      EResume[]
+  notifications Notification[]
+}
+
+model Poli {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  icon      String
+  iconBg    String
+  desc      String
+  lokasi    String?
+  estWait   Int
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  appointments Appointment[]
+  antrean      Antrean[]
+}
+
+model Appointment {
+  id        String            @id @default(uuid())
+  userId    String
+  poliId    String
+  tanggal   DateTime
+  keluhan   String
+  status    AppointmentStatus @default(WAITING)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id])
+  poli    Poli     @relation(fields: [poliId], references: [id])
+  antrean Antrean?
+  eResume EResume?
+}
+
+model Antrean {
+  id                String         @id @default(uuid())
+  userId            String
+  poliId            String
+  appointmentId     String?        @unique
+  nomor             String
+  status            AntreanStatus  @default(WAITING)
+  calledAt          DateTime?
+  serviceStartedAt  DateTime?
+  completedAt       DateTime?
+  cancelledAt       DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id])
+  poli        Poli         @relation(fields: [poliId], references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+}
+
+model EResume {
+  id            String   @id @default(uuid())
+  appointmentId String   @unique
+  userId        String
+  diagnosa      String?
+  deskripsi     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+  user        User        @relation(fields: [userId], references: [id])
+  obat        ResepObat[]
+}
+
+model ResepObat {
+  id        String   @id @default(uuid())
+  eResumeId String
+  name      String
+  rule      String
+  createdAt DateTime @default(now())
+
+  eResume EResume @relation(fields: [eResumeId], references: [id])
+}
+
+model Notification {
+  id            String   @id @default(uuid())
+  userId        String
+  type          String
+  category      String
+  categoryColor String
+  title         String
+  description   String
+  icon          String
+  iconBg        String
+  accentBorder  Boolean  @default(false)
+  readAt        DateTime?
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Promo {
+  id     String @id @default(uuid())
+  title  String
+  desc   String
+  badge  String
+  icon   String
+  color1 String
+  color2 String
+}

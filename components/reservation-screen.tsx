@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,8 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { BottomNav } from './bottom-nav';
+import { api } from '@/lib/api';
+import { Poli } from '@/types/api';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const DATE_W = (SCREEN_W - 64) / 4.5;
@@ -46,52 +48,10 @@ type PoliData = {
   iconBg: string;
   desc: string;
   estWait: string;
+  estWaitMin: number;
   queueCount: number;
   active: boolean;
 };
-
-const POLIS: PoliData[] = [
-  {
-    id: 'umum',
-    name: 'Poli Umum',
-    icon: 'medkit-outline',
-    iconBg: '#e0f2fe',
-    desc: 'Layanan pemeriksaan kesehatan dasar dan konsultasi medis umum.',
-    estWait: '15 Menit',
-    queueCount: 9,
-    active: true,
-  },
-  {
-    id: 'gigi',
-    name: 'Poli Gigi',
-    icon: 'fitness-outline',
-    iconBg: '#f1f5f9',
-    desc: 'Perawatan gigi dan mulut termasuk pencabutan, tambal, dan scaling.',
-    estWait: '20 Menit',
-    queueCount: 5,
-    active: false,
-  },
-  {
-    id: 'mata',
-    name: 'Poli Mata',
-    icon: 'eye-outline',
-    iconBg: '#fef3c7',
-    desc: 'Pemeriksaan visus, refraksi, dan penanganan gangguan penglihatan.',
-    estWait: '25 Menit',
-    queueCount: 7,
-    active: false,
-  },
-  {
-    id: 'anak',
-    name: 'Poli Anak',
-    icon: 'people-outline',
-    iconBg: '#fce7f3',
-    desc: 'Pelayanan kesehatan khusus untuk bayi, anak, dan remaja.',
-    estWait: '10 Menit',
-    queueCount: 3,
-    active: false,
-  },
-];
 
 function generateDates() {
   const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
@@ -234,6 +194,12 @@ function PoliCard({ poli, selected, onPress, index }: PoliCardProps) {
           </View>
           <Text style={s.poliQueue}>ANTREAN: {poli.queueCount} Orang</Text>
         </View>
+        <View style={s.poliEstWrap}>
+          <Ionicons name="hourglass-outline" size={13} color={C.orangeText} />
+          <Text style={s.poliEstText}>
+            Perkiraan Waktu: ~{poli.queueCount * poli.estWaitMin} Menit
+          </Text>
+        </View>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -241,8 +207,27 @@ function PoliCard({ poli, selected, onPress, index }: PoliCardProps) {
 
 export function ReservationScreen() {
   const [selectedDate, setSelectedDate] = useState(DATES[0].full);
-  const [selectedPoli, setSelectedPoli] = useState('umum');
+  const [selectedPoli, setSelectedPoli] = useState('');
+  const [poliList, setPoliList] = useState<PoliData[]>([]);
   const router = useRouter();
+
+  useEffect(() => {
+    api.get<Poli[]>('/api/poli').then((res) => {
+      setPoliList(
+        res.data.map((p) => ({
+          id: p.id,
+          name: p.name,
+          icon: p.icon as keyof typeof Ionicons.glyphMap,
+          iconBg: p.iconBg,
+          desc: p.desc,
+          estWait: `${p.estWait} Menit`,
+          estWaitMin: p.estWait,
+          queueCount: p.queueCount ?? 0,
+          active: p.active,
+        })),
+      );
+    });
+  }, []);
 
   const handlePoliPress = useCallback(
     (poli: PoliData) => {
@@ -256,7 +241,7 @@ export function ReservationScreen() {
       setSelectedPoli(poli.id);
       router.push({
         pathname: '/appointment',
-        params: { poliName: poli.name, dateLabel: label },
+        params: { poliId: poli.id, poliName: poli.name, dateLabel: label, dateISO: selectedDate.toISOString(), queueCount: String(poli.queueCount), estWait: String(poli.estWaitMin) },
       });
     },
     [selectedDate, router],
@@ -277,7 +262,7 @@ export function ReservationScreen() {
           />
           <View style={s.poliSection}>
             <Text style={s.sectionLabel}>PILIH LAYANAN POLI</Text>
-            {POLIS.map((poli, idx) => (
+            {poliList.map((poli, idx) => (
               <PoliCard
                 key={poli.id}
                 poli={poli}
@@ -410,6 +395,22 @@ const s = StyleSheet.create({
   poliMetaText: { fontSize: 11, color: C.textSecondary },
   poliMetaBold: { fontWeight: '700', color: C.primary },
   poliQueue: { fontSize: 11, fontWeight: '600', color: C.textMuted },
+  poliEstWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 8,
+    backgroundColor: C.orangeBg,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    alignSelf: 'flex-start',
+  },
+  poliEstText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: C.orangeText,
+  },
 
   spacer: { height: 20 },
 });

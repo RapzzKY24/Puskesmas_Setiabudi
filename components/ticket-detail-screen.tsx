@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,13 @@ import {
   ScrollView,
   SafeAreaView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { BottomNav } from './bottom-nav';
+import { api } from '@/lib/api';
 
 const C = {
   primary: '#0d9488',
@@ -28,25 +30,6 @@ const C = {
   warningText: '#92400e',
   danger: '#dc2626',
   infoBg: '#f1f5f9',
-};
-
-const DATA = {
-  umum: {
-    nama: 'LEXA NAMIKO PREMASTA',
-    nik: '103062400086',
-    handphone: '24 JANUARI 2026',
-  },
-  kunjungan: {
-    poli: 'POLI JANTUNG',
-    keluhan: 'SESAK NAFAS 2 HARI',
-    tanggal: '24 JANUARI 2026',
-  },
-  antrean: {
-    nomor: 'A-024',
-    dilayani: 'A-018',
-    status: 'MENUNGGU DIPANGGIL',
-    estimasi: '15 MENIT LAGI',
-  },
 };
 
 function TopBar() {
@@ -135,7 +118,57 @@ function InfoAlert() {
 }
 
 export function TicketDetailScreen() {
-  const a = DATA;
+  const [data, setData] = useState<{
+    umum: { nama: string; nik: string; handphone: string };
+    kunjungan: { poli: string; keluhan: string; tanggal: string };
+    antrean: { nomor: string; dilayani: string; status: string; estimasi: string };
+  } | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await api.get('/api/antrean/active');
+        const a = res.data;
+        if (a) {
+          setData({
+            umum: {
+              nama: a.pasien?.nama ?? a.userId ?? '-',
+              nik: a.pasien?.nik ?? '-',
+              handphone: a.pasien?.handphone ?? '-',
+            },
+            kunjungan: {
+              poli: a.poli?.name ?? a.appointment?.poli?.name ?? '-',
+              keluhan: a.appointment?.keluhan ?? '-',
+              tanggal: a.appointment?.tanggal ?? '-',
+            },
+            antrean: {
+              nomor: a.nomor ?? '-',
+              dilayani: '-',
+              status: a.status ?? '-',
+              estimasi: '-',
+            },
+          });
+        }
+      } catch (err) {
+        console.error('Ticket fetch error', err);
+      }
+    };
+    fetchData();
+  }, []);
+
+  if (!data) {
+    return (
+      <SafeAreaView style={s.safeArea}>
+        <View style={s.flex}>
+          <TopBar />
+          <View style={s.loading}>
+            <ActivityIndicator size="large" color={C.primary} />
+          </View>
+          <BottomNav />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={s.safeArea}>
@@ -151,9 +184,9 @@ export function TicketDetailScreen() {
             style={s.sectionCard}
           >
             <SectionHeader title="INFORMASI UMUM" />
-            <InfoRow icon="person-outline" label="Nama" value={a.umum.nama} />
-            <InfoRow icon="card-outline" label="NIK" value={a.umum.nik} />
-            <InfoRow icon="call-outline" label="Nomor Handphone" value={a.umum.handphone} />
+            <InfoRow icon="person-outline" label="Nama" value={data.umum.nama} />
+            <InfoRow icon="card-outline" label="NIK" value={data.umum.nik} />
+            <InfoRow icon="call-outline" label="Nomor Handphone" value={data.umum.handphone} />
           </Animated.View>
 
           <Animated.View
@@ -161,9 +194,9 @@ export function TicketDetailScreen() {
             style={s.sectionCard}
           >
             <SectionHeader title="INFORMASI KUNJUNGAN" />
-            <InfoRow icon="medical-outline" label="Poli Tujuan" value={a.kunjungan.poli} />
-            <InfoRow icon="document-text-outline" label="Keluhan" value={a.kunjungan.keluhan} />
-            <InfoRow icon="calendar-outline" label="Tanggal Kunjungan" value={a.kunjungan.tanggal} />
+            <InfoRow icon="medical-outline" label="Poli Tujuan" value={data.kunjungan.poli} />
+            <InfoRow icon="document-text-outline" label="Keluhan" value={data.kunjungan.keluhan} />
+            <InfoRow icon="calendar-outline" label="Tanggal Kunjungan" value={data.kunjungan.tanggal} />
           </Animated.View>
 
           <Animated.View
@@ -171,16 +204,16 @@ export function TicketDetailScreen() {
             style={s.sectionCard}
           >
             <SectionHeader title="INFORMASI ANTREAN" />
-            <InfoRow icon="ticket-outline" label="Nomor Antrean" value={a.antrean.nomor} />
-            <InfoRow icon="people-outline" label="Sedang Dilayani" value={a.antrean.dilayani} />
+            <InfoRow icon="ticket-outline" label="Nomor Antrean" value={data.antrean.nomor} />
+            <InfoRow icon="people-outline" label="Sedang Dilayani" value={data.antrean.dilayani} />
             <InfoRow
               icon="alert-circle-outline"
               label="Status"
-              value={a.antrean.status}
+              value={data.antrean.status}
               valueColor={C.warningText}
               valueBold
             />
-            <InfoRow icon="time-outline" label="Estimasi Waktu" value={a.antrean.estimasi} />
+            <InfoRow icon="time-outline" label="Estimasi Waktu" value={data.antrean.estimasi} />
           </Animated.View>
 
           <InfoAlert />
@@ -295,4 +328,5 @@ const s = StyleSheet.create({
   },
 
   spacer: { height: 20 },
+  loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });

@@ -19,7 +19,9 @@ import Animated, {
   FadeInUp,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { api } from '@/lib/api';
+import { useAuthStore } from '@/lib/auth-store';
 
 const C = {
   primary: '#0d9488',
@@ -202,15 +204,41 @@ function ResendSection() {
 
 export function OtpScreen() {
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
+  const [loading, setLoading] = useState(false);
   const btnScale = useSharedValue(1);
   const isComplete = otp.every((d) => d !== '');
   const router = useRouter();
+  const params = useLocalSearchParams<{ identifier?: string }>();
 
-  const handleVerify = useCallback(() => {
-    if (isComplete) {
-      router.replace('/(app)');
+  const handleVerify = useCallback(async () => {
+    if (!isComplete || loading) return;
+    setLoading(true);
+    try {
+      const code = otp.join('');
+      const res = await api.post('/api/auth/verify-otp', { code });
+      if (res.data.token) {
+        useAuthStore.getState().login(res.data.token, res.data.user);
+        router.replace('/(app)');
+      } else {
+        router.replace('/(app)');
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Kode OTP salah';
+      alert(msg);
+    } finally {
+      setLoading(false);
     }
-  }, [isComplete, router]);
+  }, [isComplete, otp, loading, router]);
+
+  const handleResend = useCallback(async () => {
+    if (!params.identifier) return;
+    try {
+      await api.post('/api/auth/resend-otp', { identifier: params.identifier });
+      alert('Kode OTP telah dikirim ulang');
+    } catch {
+      alert('Gagal mengirim ulang OTP');
+    }
+  }, [params.identifier]);
 
   const btnAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: btnScale.value }],
