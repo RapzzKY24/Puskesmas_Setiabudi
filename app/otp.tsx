@@ -1,4 +1,4 @@
-import { OtpScreen } from '@/components/otp-screen';
+import { OtpScreen } from '@/screens/otp-screen';
 
 export default function Otp() {
   return <OtpScreen />;

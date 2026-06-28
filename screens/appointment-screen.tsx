@@ -17,8 +17,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { BottomNav } from './bottom-nav';
-import { ConfirmModal } from './confirm-modal';
+import { BottomNav } from '@/components/navigation/bottom-nav';
+import { ConfirmModal } from '@/components/modals/confirm-modal';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
 

@@ -1,4 +1,4 @@
-import { DashboardScreen } from '@/components/dashboard-screen';
+import { DashboardScreen } from '@/screens/dashboard-screen';
 
 export default function AppHome() {
   return <DashboardScreen />;

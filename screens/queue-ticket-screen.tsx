@@ -14,7 +14,7 @@ import Animated, {
   useAnimatedStyle,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { BottomNav } from './bottom-nav';
+import { BottomNav } from '@/components/navigation/bottom-nav';
 import { api } from '@/lib/api';
 import { ws } from '@/lib/websocket-client';
 import { Antrean, QueueInfo } from '@/types/api';

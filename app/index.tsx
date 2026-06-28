@@ -1,4 +1,4 @@
-import { SplashScreen } from '@/components/splash-screen';
+import { SplashScreen } from '@/screens/splash-screen';
 
 export default function Home() {
   return <SplashScreen />;

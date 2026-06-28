@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { BottomNav } from './bottom-nav';
+import { BottomNav } from '@/components/navigation/bottom-nav';
 import { api } from '@/lib/api';
 import type { Poli, Antrean } from '@/types/api';
 

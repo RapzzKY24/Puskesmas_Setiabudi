@@ -1,4 +1,4 @@
-import { HistoryScreen } from '@/components/history-screen';
+import { HistoryScreen } from '@/screens/history-screen';
 
 export default function AppHistory() {
   return <HistoryScreen />;

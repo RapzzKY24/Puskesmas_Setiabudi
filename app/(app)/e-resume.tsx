@@ -1,4 +1,4 @@
-import { EResumeScreen } from '@/components/e-resume-screen';
+import { EResumeScreen } from '@/screens/e-resume-screen';
 
 export default function EResume() {
   return <EResumeScreen />;

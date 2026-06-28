@@ -15,7 +15,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { BottomNav } from './bottom-nav';
+import { BottomNav } from '@/components/navigation/bottom-nav';
 import { api } from '@/lib/api';
 import { Poli } from '@/types/api';
 

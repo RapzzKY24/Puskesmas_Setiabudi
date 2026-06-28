@@ -1,9 +1,9 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginRequestDto } from './dto/login-request.dto';
 import { RegisterRequestDto } from './dto/register-request.dto';
-import { VerifyOtpRequestDto } from './dto/verify-otp-request.dto';
 import { ResendOtpRequestDto } from './dto/resend-otp-request.dto';
+import { VerifyOtpRequestDto } from './dto/verify-otp-request.dto';
 
 @Controller('api/auth')
 export class AuthController {

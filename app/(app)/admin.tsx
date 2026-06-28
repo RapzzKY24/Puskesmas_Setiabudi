@@ -1,4 +1,4 @@
-import { AdminScreen } from '@/components/admin-screen';
+import { AdminScreen } from '@/screens/admin-screen';
 
 export default function Admin() {
   return <AdminScreen />;
