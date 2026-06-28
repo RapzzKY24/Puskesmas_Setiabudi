@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -9,18 +9,14 @@ import {
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useForm, Controller } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useRouter } from 'expo-router';
+import { Controller } from 'react-hook-form';
 import { BottomNav } from '@/components/navigation/bottom-nav';
 import { ConfirmModal } from '@/components/modals/confirm-modal';
-import { api } from '@/lib/api';
-import { useAuthStore } from '@/lib/auth-store';
+import { useAppointment } from '@/hooks/use-appointment';
 
 const C = {
   primary: '#0d9488',
@@ -45,14 +41,7 @@ const C = {
   orangeText: '#9a3412',
 };
 
-const schema = z.object({
-  keluhan: z
-    .string()
-    .min(1, 'Keluhan wajib diisi')
-    .max(500, 'Keluhan maksimal 500 karakter'),
-});
 
-type FormData = z.infer<typeof schema>;
 
 function BackHeader() {
   const router = useRouter();
@@ -187,65 +176,20 @@ function PatientSection({ user }: { user: { nik?: string | null; nama?: string |
 }
 
 export function AppointmentScreen() {
-  const [showConfirm, setShowConfirm] = useState(false);
-  const router = useRouter();
-  const params = useLocalSearchParams<{
-    poliId: string;
-    poliName: string;
-    dateLabel: string;
-    dateISO: string;
-    queueCount?: string;
-    estWait?: string;
-  }>();
-
-  const user = useAuthStore((s) => s.user);
-
-  const poliId = params.poliId ?? '';
-  const poliName = params.poliName ?? 'Poli Kesehatan Gigi';
-  const dateLabel = params.dateLabel ?? 'SELASA, 15 MARET 2026';
-  const tanggal = params.dateISO ?? new Date().toISOString();
-  const queueCount = Number(params.queueCount ?? 0);
-  const estWait = Number(params.estWait ?? 0);
-
-  const now = new Date();
-  const bookDate = new Date(tanggal);
-  const isToday =
-    bookDate.getFullYear() === now.getFullYear() &&
-    bookDate.getMonth() === now.getMonth() &&
-    bookDate.getDate() === now.getDate();
-  const isClosed = isToday && now.getHours() >= 18;
-
   const {
+    showConfirm,
+    setShowConfirm,
+    user,
+    poliName,
+    dateLabel,
+    queueCount,
+    estWait,
+    isClosed,
     control,
-    handleSubmit,
-    getValues,
-    formState: { errors },
-  } = useForm<FormData>({
-    resolver: zodResolver(schema),
-    defaultValues: { keluhan: '' },
-  });
-
-  const onSubmit = useCallback(
-    (data: FormData) => {
-      setShowConfirm(true);
-    },
-    [],
-  );
-
-  const handleConfirm = useCallback(async () => {
-    setShowConfirm(false);
-    const keluhan = getValues('keluhan');
-    try {
-      await api.post('/api/appointments', {
-        poliId,
-        tanggal: new Date(tanggal).toISOString(),
-        keluhan,
-      });
-      router.replace('/antrean');
-    } catch {
-      Alert.alert('Gagal', 'Gagal membuat janji temu. Silakan coba lagi.');
-    }
-  }, [poliId, tanggal, router, getValues]);
+    errors,
+    onSubmit,
+    handleConfirm,
+  } = useAppointment();
 
   return (
     <SafeAreaView style={s.safeArea}>
@@ -312,7 +256,7 @@ export function AppointmentScreen() {
 
               <TouchableOpacity
                 style={[s.confirmBtn, isClosed && s.confirmDisabled]}
-                onPress={isClosed ? undefined : handleSubmit(onSubmit)}
+                onPress={isClosed ? undefined : onSubmit}
                 activeOpacity={0.85}
                 disabled={isClosed}
               >

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { BottomNav } from '@/components/navigation/bottom-nav';
-import { api } from '@/lib/api';
+import { useHistory, type HistoryItem } from '@/hooks/use-history';
 
 const C = {
   primary: '#0d9488',
@@ -31,17 +31,6 @@ const C = {
   waitingBg: '#fef3c7',
   waitingText: '#92400e',
 };
-
-interface HistoryItem {
-  id: string;
-  poliName: string;
-  date: string;
-  time: string;
-  status: 'WAITING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
-  keluhan: string;
-  nomorAntrean: string;
-}
-
 
 function Header() {
   return (
@@ -155,22 +144,7 @@ function EmptyState() {
 }
 
 export function HistoryScreen() {
-  const [items, setItems] = useState<HistoryItem[]>([]);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await api.get<HistoryItem[]>('/api/history');
-        setItems(res.data);
-      } catch (err) {
-        console.error('History fetch error', err);
-      } finally {
-        setLoaded(true);
-      }
-    };
-    fetchData();
-  }, []);
+  const { items, loaded } = useHistory();
 
   return (
     <SafeAreaView style={s.safeArea}>

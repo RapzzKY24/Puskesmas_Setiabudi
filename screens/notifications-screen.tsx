@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { BottomNav } from '@/components/navigation/bottom-nav';
-import { api } from '@/lib/api';
+import { useNotifications, type NotificationItem } from '@/hooks/use-notifications';
 
 const C = {
   primary: '#0d9488',
@@ -29,21 +29,6 @@ const C = {
   infoText: '#0369a1',
   accent: '#0284c7',
 };
-
-interface NotificationItem {
-  id: string;
-  group: 'hari-ini' | 'kemarin';
-  type: 'info';
-  icon: keyof typeof Ionicons.glyphMap;
-  iconBg: string;
-  category: string;
-  categoryColor: string;
-  time: string;
-  title: string;
-  description: string;
-  accentBorder?: boolean;
-}
-
 
 function TopBar() {
   const router = useRouter();
@@ -113,52 +98,7 @@ function NotifCard({ item, index }: { item: NotificationItem; index: number }) {
 }
 
 export function NotificationsScreen() {
-  const [items, setItems] = useState<NotificationItem[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await api.get('/api/notifications');
-        const mapped: NotificationItem[] = (res.data ?? []).map(
-          (n: { id: string; type: string; category: string; categoryColor: string; title: string; description: string; icon: string; iconBg: string; accentBorder: boolean; createdAt: string }) => {
-            const date = new Date(n.createdAt);
-            const today = new Date();
-            const isToday =
-              date.getDate() === today.getDate() &&
-              date.getMonth() === today.getMonth() &&
-              date.getFullYear() === today.getFullYear();
-            return {
-              id: n.id,
-              group: isToday ? 'hari-ini' as const : 'kemarin' as const,
-              type: 'info' as const,
-              icon: (n.icon || 'notifications-outline') as keyof typeof Ionicons.glyphMap,
-              iconBg: n.iconBg,
-              category: n.category,
-              categoryColor: n.categoryColor,
-              time: date.toLocaleTimeString('id-ID', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false,
-              }),
-              title: n.title,
-              description: n.description,
-              accentBorder: n.accentBorder,
-            };
-          },
-        );
-        setItems(mapped);
-      } catch (err) {
-        console.error('Notifications fetch error', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
-
-  const todayItems = items.filter((n) => n.group === 'hari-ini');
-  const yesterdayItems = items.filter((n) => n.group === 'kemarin');
+  const { loading, items, todayItems, yesterdayItems } = useNotifications();
 
   if (loading) {
     return (

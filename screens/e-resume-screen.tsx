@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -9,12 +9,11 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { BottomNav } from '@/components/navigation/bottom-nav';
-import { api } from '@/lib/api';
-import type { EResume } from '@/types/api';
+import { useEResume, type EResume } from '@/hooks/use-e-resume';
 
 const C = {
   primary: '#0d9488',
@@ -161,17 +160,7 @@ function DisclaimerCard() {
 }
 
 export function EResumeScreen() {
-  const { appointmentId } = useLocalSearchParams<{ appointmentId: string }>();
-  const [resume, setResume] = useState<EResume | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!appointmentId) return;
-    api.get<EResume>(`/api/e-resume/by-appointment/${appointmentId}`)
-      .then((res) => setResume(res.data))
-      .catch(() => setResume(null))
-      .finally(() => setLoading(false));
-  }, [appointmentId]);
+  const { resume, loading } = useEResume();
 
   if (loading) {
     return (

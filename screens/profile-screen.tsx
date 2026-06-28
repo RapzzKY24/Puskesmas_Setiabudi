@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -6,12 +6,11 @@ import {
   StyleSheet,
   ScrollView,
   SafeAreaView,
-  Alert,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useAuthStore } from '@/lib/auth-store';
+import { useProfile } from '@/hooks/use-profile';
 
 const C = {
   primary: '#0d9488',
@@ -74,27 +73,7 @@ function InfoRow({ icon, label, value }: { icon: string; label: string; value?: 
 }
 
 export function ProfileScreen() {
-  const router = useRouter();
-  const user = useAuthStore((s) => s.user);
-  const logout = useAuthStore((s) => s.logout);
-
-  const handleLogout = useCallback(() => {
-    Alert.alert(
-      'Keluar',
-      'Apakah Anda yakin ingin keluar?',
-      [
-        { text: 'Batal', style: 'cancel' },
-        {
-          text: 'Keluar',
-          style: 'destructive',
-          onPress: () => {
-            logout();
-            router.replace('/login');
-          },
-        },
-      ],
-    );
-  }, [logout, router]);
+  const { user, handleLogout } = useProfile();
 
   return (
     <SafeAreaView style={s.safeArea}>

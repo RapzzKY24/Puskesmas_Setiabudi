@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -14,25 +14,11 @@ import Animated, {
   FadeInRight,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { BottomNav } from '@/components/navigation/bottom-nav';
-import { api } from '@/lib/api';
-import { Poli } from '@/types/api';
+import { useReservation, PoliData, DATE_W } from '@/hooks/use-reservation';
+import type { DateItem } from '@/utils/date';
 
 const { width: SCREEN_W } = Dimensions.get('window');
-const DATE_W = (SCREEN_W - 64) / 4.5;
-
-type PoliData = {
-  id: string;
-  name: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  iconBg: string;
-  desc: string;
-  estWait: string;
-  estWaitMin: number;
-  queueCount: number;
-  active: boolean;
-};
 
 const C = {
   primary: '#0d9488',
@@ -55,31 +41,7 @@ const C = {
   disabledText: '#cbd5e1',
 };
 
-type DateItem = {
-  dayName: string;
-  date: number;
-  month: string;
-  full: Date;
-  available: boolean;
-};
 
-function generateDates(remoteDates?: DateItem[]): DateItem[] {
-  const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-  if (remoteDates) return remoteDates;
-  const now = new Date();
-  return Array.from({ length: 14 }, (_, i) => {
-    const d = new Date(now);
-    d.setDate(now.getDate() + i);
-    return {
-      dayName: days[d.getDay()],
-      date: d.getDate(),
-      month: months[d.getMonth()],
-      full: d,
-      available: i > 0 || now.getHours() < 18,
-    };
-  });
-}
 
 function Header() {
   return (
@@ -213,55 +175,14 @@ function PoliCard({ poli, selected, onPress, index }: PoliCardProps) {
 }
 
 export function ReservationScreen() {
-  const [dates, setDates] = useState<DateItem[]>(() => generateDates());
-  const [selectedDate, setSelectedDate] = useState(dates[0].full);
-  const [selectedPoli, setSelectedPoli] = useState('');
-  const [poliList, setPoliList] = useState<PoliData[]>([]);
-  const router = useRouter();
-
-  const fetchPoli = useCallback(async (date: Date) => {
-    try {
-      const tanggal = date.toISOString().split('T')[0];
-      const res = await api.get<Poli[]>(`/api/poli?tanggal=${tanggal}`);
-      setPoliList(
-        res.data.map((p) => ({
-          id: p.id,
-          name: p.name,
-          icon: p.icon as keyof typeof Ionicons.glyphMap,
-          iconBg: p.iconBg,
-          desc: p.desc,
-          estWait: `${p.estWait} Menit`,
-          estWaitMin: p.estWait,
-          queueCount: p.queueCount ?? 0,
-          active: p.active,
-        })),
-      );
-    } catch (err) {
-      console.error('Fetch poli error', err);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchPoli(selectedDate);
-  }, [selectedDate, fetchPoli]);
-
-  const handlePoliPress = useCallback(
-    (poli: PoliData) => {
-      const days = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU'];
-      const months = [
-        'JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI',
-        'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER',
-      ];
-      const label = `${days[selectedDate.getDay()]}, ${selectedDate.getDate()} ${months[selectedDate.getMonth()]} ${selectedDate.getFullYear()}`;
-
-      setSelectedPoli(poli.id);
-      router.push({
-        pathname: '/appointment',
-        params: { poliId: poli.id, poliName: poli.name, dateLabel: label, dateISO: selectedDate.toISOString(), queueCount: String(poli.queueCount), estWait: String(poli.estWaitMin) },
-      });
-    },
-    [selectedDate, router],
-  );
+  const {
+    dates,
+    selectedDate,
+    setSelectedDate,
+    selectedPoli,
+    poliList,
+    handlePoliPress,
+  } = useReservation();
 
   return (
     <SafeAreaView style={s.safeArea}>

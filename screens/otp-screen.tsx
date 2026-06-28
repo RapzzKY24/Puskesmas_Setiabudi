@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useRef, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -19,9 +19,7 @@ import Animated, {
   FadeInUp,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { api } from '@/lib/api';
-import { useAuthStore } from '@/lib/auth-store';
+import { useOtp } from '@/hooks/use-otp';
 
 const C = {
   primary: '#0d9488',
@@ -67,13 +65,7 @@ function OtpHeader() {
   );
 }
 
-interface OtpInputProps {
-  code: string[];
-  onChangeCode: (code: string[]) => void;
-  onFilled: () => void;
-}
-
-function OtpInput({ code, onChangeCode, onFilled }: OtpInputProps) {
+function OtpInput({ code, onChangeCode, onFilled }: { code: string[]; onChangeCode: (code: string[]) => void; onFilled: () => void }) {
   const inputRefs = useRef<(TextInput | null)[]>([]);
   const [focusedIdx, setFocusedIdx] = useState<number>(0);
 
@@ -134,68 +126,62 @@ function OtpInput({ code, onChangeCode, onFilled }: OtpInputProps) {
   );
 }
 
-interface OtpBoxProps {
+function OtpBox({ value, isFocused, onFocus, onChangeText, onKeyPress }: {
   value: string;
   isFocused: boolean;
   onFocus: () => void;
   onChangeText: (text: string) => void;
   onKeyPress: (e: { nativeEvent: { key: string } }) => void;
+}) {
+  const scale = useSharedValue(1);
+  const borderColor = useSharedValue(0);
+
+  useEffect(() => {
+    if (value) {
+      scale.value = withSequence(withSpring(1.08), withSpring(1));
+      borderColor.value = withTiming(1, { duration: 200 });
+    } else if (!isFocused) {
+      borderColor.value = withTiming(0, { duration: 200 });
+    }
+  }, [value, isFocused, scale, borderColor]);
+
+  useEffect(() => {
+    if (isFocused) {
+      borderColor.value = withTiming(1, { duration: 200 });
+    } else if (!value) {
+      borderColor.value = withTiming(0, { duration: 200 });
+    }
+  }, [isFocused, value, borderColor]);
+
+  const boxStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    borderColor:
+      borderColor.value > 0 ? C.primary : C.border,
+  }));
+
+  return (
+    <Animated.View style={[s.otpBox, boxStyle]}>
+      <TextInput
+        ref={(ref) => { /* handled by parent */ }}
+        style={s.otpInput}
+        value={value}
+        onChangeText={onChangeText}
+        onKeyPress={onKeyPress}
+        onFocus={onFocus}
+        keyboardType="number-pad"
+        maxLength={1}
+        selectionColor={C.primary}
+        caretHidden={false}
+      />
+    </Animated.View>
+  );
 }
 
-const OtpBox = React.forwardRef<TextInput, OtpBoxProps>(
-  ({ value, isFocused, onFocus, onChangeText, onKeyPress }, ref) => {
-    const scale = useSharedValue(1);
-    const borderColor = useSharedValue(0);
-
-    useEffect(() => {
-      if (value) {
-        scale.value = withSequence(withSpring(1.08), withSpring(1));
-        borderColor.value = withTiming(1, { duration: 200 });
-      } else if (!isFocused) {
-        borderColor.value = withTiming(0, { duration: 200 });
-      }
-    }, [value, isFocused, scale, borderColor]);
-
-    useEffect(() => {
-      if (isFocused) {
-        borderColor.value = withTiming(1, { duration: 200 });
-      } else if (!value) {
-        borderColor.value = withTiming(0, { duration: 200 });
-      }
-    }, [isFocused, value, borderColor]);
-
-    const boxStyle = useAnimatedStyle(() => ({
-      transform: [{ scale: scale.value }],
-      borderColor:
-        borderColor.value > 0 ? C.primary : C.border,
-    }));
-
-    return (
-      <Animated.View style={[s.otpBox, boxStyle]}>
-        <TextInput
-          ref={ref}
-          style={s.otpInput}
-          value={value}
-          onChangeText={onChangeText}
-          onKeyPress={onKeyPress}
-          onFocus={onFocus}
-          keyboardType="number-pad"
-          maxLength={1}
-          selectionColor={C.primary}
-          caretHidden={false}
-        />
-      </Animated.View>
-    );
-  },
-);
-
-OtpBox.displayName = 'OtpBox';
-
-function ResendSection() {
+function ResendSection({ onResend }: { onResend: () => void }) {
   return (
     <View style={s.resendSection}>
       <Text style={s.resendText}>Tidak Mendapatkan Kode ?</Text>
-      <TouchableOpacity activeOpacity={0.7}>
+      <TouchableOpacity activeOpacity={0.7} onPress={onResend}>
         <Text style={s.resendLink}>Kirim Ulang</Text>
       </TouchableOpacity>
     </View>
@@ -203,49 +189,16 @@ function ResendSection() {
 }
 
 export function OtpScreen() {
-  const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
-  const [loading, setLoading] = useState(false);
-  const btnScale = useSharedValue(1);
-  const isComplete = otp.every((d) => d !== '');
-  const router = useRouter();
-  const params = useLocalSearchParams<{ identifier?: string }>();
-
-  const handleVerify = useCallback(async () => {
-    if (!isComplete || loading) return;
-    setLoading(true);
-    try {
-      const code = otp.join('');
-      const res = await api.post('/api/auth/verify-otp', {
-        identifier: params.identifier,
-        code,
-      });
-      if (res.data.token) {
-        useAuthStore.getState().login(res.data.token, res.data.user);
-        router.replace('/(app)');
-      } else {
-        router.replace('/(app)');
-      }
-    } catch (err: any) {
-      const msg = err.response?.data?.message || 'Kode OTP salah';
-      alert(msg);
-    } finally {
-      setLoading(false);
-    }
-  }, [isComplete, otp, loading, router, params.identifier]);
-
-  const handleResend = useCallback(async () => {
-    if (!params.identifier) return;
-    try {
-      const res = await api.post('/api/auth/resend-otp', { identifier: params.identifier });
-      alert(res.data.message || 'Kode OTP telah dikirim ulang');
-    } catch {
-      alert('Gagal mengirim ulang OTP');
-    }
-  }, [params.identifier]);
-
-  const btnAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: btnScale.value }],
-  }));
+  const {
+    otp,
+    setOtp,
+    loading,
+    isComplete,
+    btnScale,
+    btnAnimStyle,
+    handleVerify,
+    handleResend,
+  } = useOtp();
 
   return (
     <SafeAreaView style={s.safeArea}>
@@ -271,7 +224,7 @@ export function OtpScreen() {
               onFilled={() => {}}
             />
 
-            <ResendSection />
+            <ResendSection onResend={handleResend} />
 
             <Animated.View style={btnAnimStyle}>
               <TouchableOpacity

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -15,9 +15,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomNav } from '@/components/navigation/bottom-nav';
-import { api } from '@/lib/api';
-import { ws } from '@/lib/websocket-client';
-import { Antrean, QueueInfo } from '@/types/api';
+import { useQueueTicket, Antrean } from '@/hooks/use-queue-ticket';
 
 const C = {
   primary: '#0d9488',
@@ -130,30 +128,7 @@ function CheckinSection() {
 }
 
 export function QueueTicketScreen() {
-  const [antrean, setAntrean] = useState<QueueInfo['antrean']>(null);
-  const [currentServing, setCurrentServing] = useState<string | null>(null);
-  const [estWaitLabel, setEstWaitLabel] = useState('---');
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await api.get<QueueInfo>('/api/antrean/me');
-        const data = res.data;
-        setAntrean(data.antrean);
-        setCurrentServing(data.currentServing);
-        setEstWaitLabel(data.estWaitLabel);
-      } catch (err) {
-        console.error('Queue ticket fetch error', err);
-      }
-    };
-    fetchData();
-
-    ws.connect();
-    const unsub = ws.on('antrean:updated', () => {
-      fetchData();
-    });
-    return () => unsub();
-  }, []);
+  const { antrean, currentServing, estWaitLabel } = useQueueTicket();
 
   return (
     <SafeAreaView style={s.safeArea}>

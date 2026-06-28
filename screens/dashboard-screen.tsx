@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState, useEffect } from 'react';
+import React, { useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -19,10 +19,7 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { BottomNav } from '@/components/navigation/bottom-nav';
-import { api } from '@/lib/api';
-import { ws } from '@/lib/websocket-client';
-import { useAuthStore } from '@/lib/auth-store';
-import type { Poli, Antrean, Promo, QueueInfo } from '@/types/api';
+import { useDashboard, type Promo, type QueueInfo } from '@/hooks/use-dashboard';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const CARD_W = SCREEN_W - 48;
@@ -251,39 +248,7 @@ function QueueSection({ queueInfo, loading }: { queueInfo: QueueInfo | null; loa
 }
 
 export function DashboardScreen() {
-  const user = useAuthStore((s) => s.user);
-  const nama = user?.nama ?? 'Lexa';
-  const [loading, setLoading] = useState(true);
-  const [queueInfo, setQueueInfo] = useState<QueueInfo | null>(null);
-  const [, setPoliList] = useState<Poli[]>([]);
-  const [promos, setPromos] = useState<Promo[]>([]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [poliRes, promosRes, queueRes] = await Promise.all([
-          api.get<Poli[]>('/api/poli'),
-          api.get<Promo[]>('/api/promos'),
-          api.get<QueueInfo>('/api/antrean/me'),
-        ]);
-        setPoliList(poliRes.data);
-        setPromos(promosRes.data);
-        setQueueInfo(queueRes.data);
-      } catch (err) {
-        console.error('Dashboard fetch error', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-
-    ws.connect();
-    const unsub = ws.on('antrean:updated', () => {
-      fetchData();
-    });
-    return () => unsub();
-  }, []);
+  const { user, nama, loading, queueInfo, promos } = useDashboard();
 
   return (
     <SafeAreaView style={s.safeArea}>
