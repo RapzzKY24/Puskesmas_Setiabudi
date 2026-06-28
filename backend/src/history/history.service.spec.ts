@@ -44,7 +44,7 @@ describe('HistoryService', () => {
 
       expect(prisma.appointment.findMany).toHaveBeenCalledWith({
         where: { userId: 'user-1' },
-        include: { poli: true },
+        include: { poli: true, antrean: true },
         orderBy: { tanggal: 'desc' },
       });
       expect(result).toHaveLength(2);

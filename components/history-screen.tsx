@@ -38,6 +38,8 @@ interface HistoryItem {
   date: string;
   time: string;
   status: 'WAITING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  keluhan: string;
+  nomorAntrean: string;
 }
 
 
@@ -65,48 +67,75 @@ function HistoryCard({ item, index }: { item: HistoryItem; index: number }) {
     <Animated.View
       entering={FadeInDown.duration(300).delay(index * 80).springify()}
     >
-      <View style={s.card}>
-        <View style={s.cardTop}>
-          <View
-            style={[
-              s.statusBadge,
-              badgeStyle,
-            ]}
-          >
-            <Text
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={() => router.push({
+          pathname: '/(app)/ticket-detail',
+          params: {
+            appointmentId: item.id,
+            poliName: item.poliName,
+            date: item.date,
+            time: item.time,
+            status: item.status,
+            keluhan: item.keluhan,
+            nomorAntrean: item.nomorAntrean,
+          },
+        })}
+      >
+        <View style={s.card}>
+          <View style={s.cardTop}>
+            <View
               style={[
-                s.statusText,
-                textStyle,
+                s.statusBadge,
+                badgeStyle,
               ]}
             >
-              {item.status === 'COMPLETED' ? 'SELESAI' :
-               item.status === 'CANCELLED' ? 'BATAL' :
-               item.status === 'WAITING' ? 'MENUNGGU' : 'DIPROSES'}
-            </Text>
+              <Text
+                style={[
+                  s.statusText,
+                  textStyle,
+                ]}
+              >
+                {item.status === 'COMPLETED' ? 'SELESAI' :
+                 item.status === 'CANCELLED' ? 'BATAL' :
+                 item.status === 'WAITING' ? 'MENUNGGU' : 'DIPROSES'}
+              </Text>
+            </View>
+            <View style={s.dateWrap}>
+              <Text style={s.dateText}>{item.date}</Text>
+              <Text style={s.timeText}>{item.time}</Text>
+            </View>
           </View>
-          <View style={s.dateWrap}>
-            <Text style={s.dateText}>{item.date}</Text>
-            <Text style={s.timeText}>{item.time}</Text>
-          </View>
+
+          <Text style={s.poliName}>{item.poliName}</Text>
+
+          {item.nomorAntrean !== '-' && (
+            <View style={s.nomorRow}>
+              <Ionicons name="ticket-outline" size={14} color={C.primary} />
+              <Text style={s.nomorText}>No. Antrean: {item.nomorAntrean}</Text>
+            </View>
+          )}
+
+          {item.keluhan && (
+            <Text style={s.keluhanText} numberOfLines={1}>{item.keluhan}</Text>
+          )}
+
+          {isSelesai && (
+            <TouchableOpacity
+              style={s.resumeBtn}
+              activeOpacity={0.85}
+              onPress={() => router.push({ pathname: '/(app)/e-resume', params: { appointmentId: item.id } })}
+            >
+              <Ionicons
+                name="document-text-outline"
+                size={16}
+                color="#fff"
+              />
+              <Text style={s.resumeText}>E-Resume</Text>
+            </TouchableOpacity>
+          )}
         </View>
-
-        <Text style={s.poliName}>{item.poliName}</Text>
-
-        {isSelesai && (
-          <TouchableOpacity
-            style={s.resumeBtn}
-            activeOpacity={0.85}
-            onPress={() => router.push({ pathname: '/(app)/e-resume', params: { appointmentId: item.id } })}
-          >
-            <Ionicons
-              name="document-text-outline"
-              size={16}
-              color="#fff"
-            />
-            <Text style={s.resumeText}>E-Resume</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      </TouchableOpacity>
     </Animated.View>
   );
 }
@@ -206,7 +235,25 @@ const s = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: C.text,
-    marginBottom: 14,
+    marginBottom: 8,
+  },
+
+  nomorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  nomorText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: C.primary,
+  },
+  keluhanText: {
+    fontSize: 12,
+    color: C.textMuted,
+    marginBottom: 12,
+    lineHeight: 16,
   },
 
   resumeBtn: {

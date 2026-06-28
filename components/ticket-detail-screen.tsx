@@ -11,9 +11,10 @@ import {
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { BottomNav } from './bottom-nav';
 import { api } from '@/lib/api';
+import { useAuthStore } from '@/lib/auth-store';
 
 const C = {
   primary: '#0d9488',
@@ -118,13 +119,49 @@ function InfoAlert() {
 }
 
 export function TicketDetailScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams<{
+    appointmentId?: string;
+    poliName?: string;
+    date?: string;
+    time?: string;
+    status?: string;
+    keluhan?: string;
+    nomorAntrean?: string;
+  }>();
+  const user = useAuthStore((s) => s.user);
+
   const [data, setData] = useState<{
     umum: { nama: string; nik: string; handphone: string };
     kunjungan: { poli: string; keluhan: string; tanggal: string };
     antrean: { nomor: string; dilayani: string; status: string; estimasi: string };
   } | null>(null);
 
+  const hasParams = params.poliName && params.nomorAntrean;
+
   useEffect(() => {
+    if (hasParams) {
+      setData({
+        umum: {
+          nama: user?.nama ?? '-',
+          nik: user?.nik ?? '-',
+          handphone: user?.noHp ?? '-',
+        },
+        kunjungan: {
+          poli: params.poliName ?? '-',
+          keluhan: params.keluhan ?? '-',
+          tanggal: `${params.date} ${params.time}`,
+        },
+        antrean: {
+          nomor: params.nomorAntrean ?? '-',
+          dilayani: '-',
+          status: params.status ?? '-',
+          estimasi: '-',
+        },
+      });
+      return;
+    }
+
     const fetchData = async () => {
       try {
         const res = await api.get('/api/antrean/active');
@@ -154,7 +191,7 @@ export function TicketDetailScreen() {
       }
     };
     fetchData();
-  }, []);
+  }, [hasParams, params, user]);
 
   if (!data) {
     return (
@@ -205,7 +242,9 @@ export function TicketDetailScreen() {
           >
             <SectionHeader title="INFORMASI ANTREAN" />
             <InfoRow icon="ticket-outline" label="Nomor Antrean" value={data.antrean.nomor} />
-            <InfoRow icon="people-outline" label="Sedang Dilayani" value={data.antrean.dilayani} />
+            {!hasParams && (
+              <InfoRow icon="people-outline" label="Sedang Dilayani" value={data.antrean.dilayani} />
+            )}
             <InfoRow
               icon="alert-circle-outline"
               label="Status"
@@ -213,8 +252,21 @@ export function TicketDetailScreen() {
               valueColor={C.warningText}
               valueBold
             />
-            <InfoRow icon="time-outline" label="Estimasi Waktu" value={data.antrean.estimasi} />
+            {!hasParams && (
+              <InfoRow icon="time-outline" label="Estimasi Waktu" value={data.antrean.estimasi} />
+            )}
           </Animated.View>
+
+          {params.status === 'COMPLETED' && (
+            <TouchableOpacity
+              style={s.resumeBtn}
+              activeOpacity={0.85}
+              onPress={() => router.push({ pathname: '/(app)/e-resume', params: { appointmentId: params.appointmentId } })}
+            >
+              <Ionicons name="document-text-outline" size={18} color="#fff" />
+              <Text style={s.resumeBtnText}>Lihat E-Resume</Text>
+            </TouchableOpacity>
+          )}
 
           <InfoAlert />
           <View style={s.spacer} />
@@ -302,6 +354,23 @@ const s = StyleSheet.create({
     textAlign: 'right',
     flexShrink: 1,
     marginLeft: 12,
+  },
+
+  resumeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: C.primary,
+    borderRadius: 14,
+    marginHorizontal: 20,
+    marginTop: 16,
+    height: 50,
+    gap: 8,
+  },
+  resumeBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#fff',
   },
 
   alertCard: {
