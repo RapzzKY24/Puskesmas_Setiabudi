@@ -35,7 +35,7 @@ describe('AppointmentsService', () => {
       const poli = mockPoli();
       const todayCount = 0;
       prisma.poli.findUnique.mockResolvedValue(poli);
-      prisma.antrean.count.mockResolvedValue(todayCount);
+      prisma.appointment.count.mockResolvedValue(todayCount);
       prisma.appointment.create.mockResolvedValue(mockAppointment());
       prisma.antrean.create.mockResolvedValue(mockAntrean());
       prisma.notification.create.mockResolvedValue({});
@@ -58,7 +58,7 @@ describe('AppointmentsService', () => {
 
     it('should generate correct nomor with padded zero', async () => {
       prisma.poli.findUnique.mockResolvedValue(mockPoli({ code: 'GIGI' }));
-      prisma.antrean.count.mockResolvedValue(5);
+      prisma.appointment.count.mockResolvedValue(5);
       prisma.appointment.create.mockResolvedValue(mockAppointment());
       prisma.antrean.create.mockResolvedValue(mockAntrean());
       prisma.notification.create.mockResolvedValue({});

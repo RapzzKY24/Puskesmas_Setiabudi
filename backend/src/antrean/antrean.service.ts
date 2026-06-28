@@ -29,10 +29,17 @@ export class AntreanService {
       return { antrean: null, queueAhead: 0, totalQueue: 0, position: 0, currentServing: null, estWaitMin: 0, estWaitLabel: '< 1 Menit' };
     }
 
+    const apptTanggal = antrean.appointment?.tanggal;
+    const dayStart = apptTanggal ? new Date(apptTanggal) : new Date();
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = apptTanggal ? new Date(apptTanggal) : new Date();
+    dayEnd.setHours(23, 59, 59, 999);
+
     const queueAhead = await this.prisma.antrean.count({
       where: {
         poliId: antrean.poliId,
         status: { in: ['WAITING', 'CALLED'] },
+        appointment: { tanggal: { gte: dayStart, lte: dayEnd } },
         createdAt: { lt: antrean.createdAt },
       },
     });
@@ -41,6 +48,7 @@ export class AntreanService {
       where: {
         poliId: antrean.poliId,
         status: { in: ['WAITING', 'CALLED'] },
+        appointment: { tanggal: { gte: dayStart, lte: dayEnd } },
       },
     });
 
@@ -92,13 +100,20 @@ export class AntreanService {
     if (antreanId) {
       const antrean = await this.prisma.antrean.findUnique({
         where: { id: antreanId },
-        include: { poli: true },
+        include: { poli: true, appointment: true },
       });
       if (antrean && antrean.poli) {
+        const apptTanggal = antrean.appointment?.tanggal;
+        const dayStart = apptTanggal ? new Date(apptTanggal) : new Date();
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = apptTanggal ? new Date(apptTanggal) : new Date();
+        dayEnd.setHours(23, 59, 59, 999);
+
         const countAhead = await this.prisma.antrean.count({
           where: {
             poliId,
             status: { in: ['WAITING', 'CALLED'] },
+            appointment: { tanggal: { gte: dayStart, lte: dayEnd } },
             createdAt: { lt: antrean.createdAt },
           },
         });

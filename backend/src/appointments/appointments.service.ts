@@ -21,10 +21,10 @@ export class AppointmentsService {
     const dayEnd = new Date(tanggal);
     dayEnd.setHours(23, 59, 59, 999);
 
-    const todayCount = await this.prisma.antrean.count({
+    const todayCount = await this.prisma.appointment.count({
       where: {
         poliId: data.poliId,
-        createdAt: { gte: dayStart, lte: dayEnd },
+        tanggal: { gte: dayStart, lte: dayEnd },
       },
     });
 
