@@ -82,9 +82,9 @@ function HeroSection() {
     >
       <View style={s.heroBg}>
         <View style={s.heroContent}>
-          <Text style={s.heroTitle}>Layanan Kesehatan{'\n'}Terpercaya</Text>
+          <Text style={s.heroTitle}>Puskesmas Setiabudi</Text>
           <Text style={s.heroSub}>
-            Konsultasi dengan dokter spesialis tanpa antre
+            Ambil jadwal antrian online tanpa antre langsung
           </Text>
         </View>
         <View style={s.heroIllus}>
@@ -102,7 +102,7 @@ function HeroSection() {
           />
           <TextInput
             style={s.searchInput}
-            placeholder="Cari Poli , Dokter , dan Spesialis"
+            placeholder="Cari Poli"
             placeholderTextColor={C.textMuted}
             autoCapitalize="none"
           />
