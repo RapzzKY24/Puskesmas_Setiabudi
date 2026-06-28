@@ -11,8 +11,8 @@ export class PoliController {
   constructor(private readonly poli: PoliService) {}
 
   @Get()
-  findAll(@Query('all') all?: string) {
-    return this.poli.findAll(all === 'true');
+  findAll(@Query('all') all?: string, @Query('tanggal') tanggal?: string) {
+    return this.poli.findAll(all === 'true', tanggal);
   }
 
   @Get(':id')

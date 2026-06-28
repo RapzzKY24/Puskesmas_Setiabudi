@@ -8,21 +8,22 @@ import { Prisma } from '@prisma/client';
 export class PoliService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(includeInactive = false) {
+  async findAll(includeInactive = false, tanggal?: string) {
     const polis = await this.prisma.poli.findMany({
       where: includeInactive ? {} : { active: true },
     });
 
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
+    const date = tanggal ? new Date(tanggal) : new Date();
+    const dayStart = new Date(date);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(date);
+    dayEnd.setHours(23, 59, 59, 999);
 
     const antreans = await this.prisma.antrean.findMany({
       where: {
         status: { in: ['WAITING', 'CALLED'] },
         appointment: {
-          tanggal: { gte: todayStart, lte: todayEnd },
+          tanggal: { gte: dayStart, lte: dayEnd },
         },
       },
       select: { poliId: true },

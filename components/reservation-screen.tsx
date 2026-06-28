@@ -211,8 +211,10 @@ export function ReservationScreen() {
   const [poliList, setPoliList] = useState<PoliData[]>([]);
   const router = useRouter();
 
-  useEffect(() => {
-    api.get<Poli[]>('/api/poli').then((res) => {
+  const fetchPoli = useCallback(async (date: Date) => {
+    try {
+      const tanggal = date.toISOString().split('T')[0];
+      const res = await api.get<Poli[]>(`/api/poli?tanggal=${tanggal}`);
       setPoliList(
         res.data.map((p) => ({
           id: p.id,
@@ -226,8 +228,14 @@ export function ReservationScreen() {
           active: p.active,
         })),
       );
-    });
+    } catch (err) {
+      console.error('Fetch poli error', err);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchPoli(selectedDate);
+  }, [selectedDate, fetchPoli]);
 
   const handlePoliPress = useCallback(
     (poli: PoliData) => {
