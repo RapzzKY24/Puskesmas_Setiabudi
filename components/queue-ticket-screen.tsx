@@ -100,7 +100,7 @@ function StatusGrid({
     <View style={s.gridRow}>
       <View style={s.gridCard}>
         <Text style={s.gridLabel}>Sedang Dilayani</Text>
-        <Text style={s.gridValue}>{sedangDilayani}</Text>
+        <Text style={sedangDilayani === '---' ? s.gridValueMuted : s.gridValue}>{sedangDilayani}</Text>
       </View>
       <View style={s.gridCard}>
         <Text style={s.gridLabel}>Estimasi Menunggu</Text>
@@ -276,6 +276,11 @@ const s = StyleSheet.create({
     fontSize: 24,
     fontWeight: '800',
     color: C.primary,
+  },
+  gridValueMuted: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: C.textMuted,
   },
   gridValueDark: {
     fontSize: 24,

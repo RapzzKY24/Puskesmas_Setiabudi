@@ -15,12 +15,16 @@ export class PoliService {
 
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
 
     const counts = await this.prisma.antrean.groupBy({
       by: ['poliId'],
       where: {
         status: { in: ['WAITING', 'CALLED'] },
-        createdAt: { gte: todayStart },
+        appointment: {
+          tanggal: { gte: todayStart, lte: todayEnd },
+        },
       },
       _count: { id: true },
     });

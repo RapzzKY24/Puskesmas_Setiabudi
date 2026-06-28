@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   Dimensions,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -170,14 +171,30 @@ function PromoCarousel({ promos }: { promos: Promo[] }) {
   );
 }
 
-function QueueSection({ queueInfo }: { queueInfo: QueueInfo | null }) {
+function QueueSection({ queueInfo, loading }: { queueInfo: QueueInfo | null; loading: boolean }) {
   const antrean = queueInfo?.antrean;
-  const poliName = antrean?.poli?.name ?? 'Poli Jantung';
-  const queueNum = antrean?.nomor ?? '9';
   const queueAhead = queueInfo?.queueAhead ?? 0;
   const estWaitLabel = queueInfo?.estWaitLabel ?? '< 1 Menit';
 
+  if (loading) {
+    return (
+      <View style={s.queueSection}>
+        <Text style={s.sectionTitle}>ANTREAN AKTIF</Text>
+        <View style={s.queueCard}>
+          <View style={s.emptyQueue}>
+            <ActivityIndicator size="small" color={C.primary} />
+            <Text style={s.emptyText}>Memuat antrean...</Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   if (!antrean) return null;
+
+  const poliName = antrean?.poli?.name ?? 'Poli';
+  const queueNum = antrean?.nomor ?? '--';
+  const isFirst = queueAhead === 0;
 
   return (
     <View style={s.queueSection}>
@@ -198,7 +215,10 @@ function QueueSection({ queueInfo }: { queueInfo: QueueInfo | null }) {
           <View style={s.queueInfo}>
             <Text style={s.queuePoli}>{poliName}</Text>
             <Text style={s.queueStatus}>
-              Anda menunggu {queueAhead} antrean lagi &middot; {estWaitLabel}
+              {isFirst
+                ? 'Silakan masuk, Anda antrean pertama'
+                : `Anda menunggu ${queueAhead} antrean lagi`}
+              {' \u00B7 '}{estWaitLabel}
             </Text>
           </View>
           <View style={s.queueNumWrap}>
@@ -206,7 +226,7 @@ function QueueSection({ queueInfo }: { queueInfo: QueueInfo | null }) {
               <Text style={s.queueNumLabel}>No</Text>
             </View>
             <View style={s.queueNumBody}>
-              <Text style={s.queueNumValue}>{queueNum}</Text>
+              <Text style={s.queueNumValue}>{queueNum.split('-')[1]?.replace(/^0+/, '') || queueNum}</Text>
             </View>
           </View>
         </View>
@@ -219,7 +239,7 @@ function QueueSection({ queueInfo }: { queueInfo: QueueInfo | null }) {
             style={{ marginRight: 6 }}
           />
           <Text style={s.confirmText}>
-            Konfirmasi Antrean Kamu Pada Rabu , 23 Mei 2026
+            {isFirst ? 'Anda dipanggil, silakan menuju poli' : `Konfirmasi Antrean Kamu Pada ${new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`}
           </Text>
         </TouchableOpacity>
       </Animated.View>
@@ -230,6 +250,7 @@ function QueueSection({ queueInfo }: { queueInfo: QueueInfo | null }) {
 export function DashboardScreen() {
   const user = useAuthStore((s) => s.user);
   const nama = user?.nama ?? 'Lexa';
+  const [loading, setLoading] = useState(true);
   const [queueInfo, setQueueInfo] = useState<QueueInfo | null>(null);
   const [, setPoliList] = useState<Poli[]>([]);
   const [promos, setPromos] = useState<Promo[]>([]);
@@ -237,6 +258,7 @@ export function DashboardScreen() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
         const [poliRes, promosRes, queueRes] = await Promise.all([
           api.get<Poli[]>('/api/poli'),
           api.get<Promo[]>('/api/promos'),
@@ -247,6 +269,8 @@ export function DashboardScreen() {
         setQueueInfo(queueRes.data);
       } catch (err) {
         console.error('Dashboard fetch error', err);
+      } finally {
+        setLoading(false);
       }
     };
     fetchData();
@@ -269,7 +293,7 @@ export function DashboardScreen() {
         >
           <HeroSection />
           <PromoCarousel promos={promos} />
-          <QueueSection queueInfo={queueInfo} />
+          <QueueSection queueInfo={queueInfo} loading={loading} />
           <View style={s.bottomSpacer} />
         </ScrollView>
         <BottomNav />
@@ -465,6 +489,16 @@ const s = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: C.primary,
+  },
+
+  emptyQueue: {
+    padding: 32,
+    alignItems: 'center',
+    gap: 12,
+  },
+  emptyText: {
+    fontSize: 13,
+    color: C.textMuted,
   },
 
   bottomSpacer: { height: 20 },
