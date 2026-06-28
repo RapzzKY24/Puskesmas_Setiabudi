@@ -18,18 +18,20 @@ export class PoliService {
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
 
-    const counts = await this.prisma.antrean.groupBy({
-      by: ['poliId'],
+    const antreans = await this.prisma.antrean.findMany({
       where: {
         status: { in: ['WAITING', 'CALLED'] },
         appointment: {
           tanggal: { gte: todayStart, lte: todayEnd },
         },
       },
-      _count: { id: true },
+      select: { poliId: true },
     });
 
-    const countMap = new Map(counts.map((c) => [c.poliId, c._count.id]));
+    const countMap = new Map<string, number>();
+    for (const a of antreans) {
+      countMap.set(a.poliId, (countMap.get(a.poliId) ?? 0) + 1);
+    }
 
     return polis.map((p) => ({
       ...p,

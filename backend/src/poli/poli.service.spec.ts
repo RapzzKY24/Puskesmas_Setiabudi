@@ -28,8 +28,8 @@ describe('PoliService', () => {
     it('should return active polis with queueCount by default', async () => {
       const polis = [mockPoli({ id: 'p1' }), mockPoli({ id: 'p2' })];
       prisma.poli.findMany.mockResolvedValue(polis);
-      prisma.antrean.groupBy.mockResolvedValue([
-        { poliId: 'p1', _count: { id: 3 } },
+      prisma.antrean.findMany.mockResolvedValue([
+        { poliId: 'p1' }, { poliId: 'p1' }, { poliId: 'p1' },
       ]);
 
       const result = await service.findAll();
@@ -42,7 +42,7 @@ describe('PoliService', () => {
 
     it('should include inactive polis when includeInactive is true', async () => {
       prisma.poli.findMany.mockResolvedValue([]);
-      prisma.antrean.groupBy.mockResolvedValue([]);
+      prisma.antrean.findMany.mockResolvedValue([]);
 
       await service.findAll(true);
 
@@ -51,7 +51,7 @@ describe('PoliService', () => {
 
     it('should handle empty result gracefully', async () => {
       prisma.poli.findMany.mockResolvedValue([]);
-      prisma.antrean.groupBy.mockResolvedValue([]);
+      prisma.antrean.findMany.mockResolvedValue([]);
 
       const result = await service.findAll();
 
