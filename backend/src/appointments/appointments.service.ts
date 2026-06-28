@@ -5,6 +5,9 @@ import { AppointmentStatus } from '@prisma/client';
 
 @Injectable()
 export class AppointmentsService {
+  private readonly JAM_BUKA = 8;
+  private readonly JAM_TUTUP = 18;
+
   constructor(private readonly prisma: PrismaService) {}
 
   async create(userId: string, data: CreateAppointmentRequestDto) {
@@ -14,6 +17,16 @@ export class AppointmentsService {
     const tanggal = new Date(data.tanggal);
     if (isNaN(tanggal.getTime())) {
       throw new BadRequestException('Format tanggal tidak valid');
+    }
+
+    const now = new Date();
+    const isToday =
+      tanggal.getFullYear() === now.getFullYear() &&
+      tanggal.getMonth() === now.getMonth() &&
+      tanggal.getDate() === now.getDate();
+
+    if (isToday && now.getHours() >= this.JAM_TUTUP) {
+      throw new BadRequestException('Puskesmas sudah tutup. Silakan pilih tanggal lain.');
     }
 
     const dayStart = new Date(tanggal);
@@ -89,18 +102,22 @@ export class AppointmentsService {
   }
 
   async getAvailableDates(poliId: string) {
-    const dates: { dayName: string; date: number; month: string; full: Date }[] = [];
+    const dates: { dayName: string; date: number; month: string; full: Date; available: boolean }[] = [];
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+    const now = new Date();
 
     for (let i = 0; i < 14; i++) {
       const d = new Date();
       d.setDate(d.getDate() + i);
+      const isToday = i === 0;
+      const available = !isToday || now.getHours() < this.JAM_TUTUP;
       dates.push({
         dayName: days[d.getDay()],
         date: d.getDate(),
         month: months[d.getMonth()],
         full: d,
+        available,
       });
     }
 

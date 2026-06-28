@@ -22,6 +22,18 @@ import { Poli } from '@/types/api';
 const { width: SCREEN_W } = Dimensions.get('window');
 const DATE_W = (SCREEN_W - 64) / 4.5;
 
+type PoliData = {
+  id: string;
+  name: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  iconBg: string;
+  desc: string;
+  estWait: string;
+  estWaitMin: number;
+  queueCount: number;
+  active: boolean;
+};
+
 const C = {
   primary: '#0d9488',
   primaryDark: '#0f766e',
@@ -39,42 +51,35 @@ const C = {
   successText: '#166534',
   orangeBg: '#fff7ed',
   orangeText: '#9a3412',
+  disabledBg: '#e2e8f0',
+  disabledText: '#cbd5e1',
 };
 
-type PoliData = {
-  id: string;
-  name: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  iconBg: string;
-  desc: string;
-  estWait: string;
-  estWaitMin: number;
-  queueCount: number;
-  active: boolean;
+type DateItem = {
+  dayName: string;
+  date: number;
+  month: string;
+  full: Date;
+  available: boolean;
 };
 
-function generateDates() {
+function generateDates(remoteDates?: DateItem[]): DateItem[] {
   const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-  const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-    'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
-  ];
-  const result: { dayName: string; date: number; month: string; full: Date }[] = [];
-  const today = new Date();
-  for (let i = 0; i < 14; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    result.push({
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  if (remoteDates) return remoteDates;
+  const now = new Date();
+  return Array.from({ length: 14 }, (_, i) => {
+    const d = new Date(now);
+    d.setDate(now.getDate() + i);
+    return {
       dayName: days[d.getDay()],
       date: d.getDate(),
       month: months[d.getMonth()],
       full: d,
-    });
-  }
-  return result;
+      available: i > 0 || now.getHours() < 18,
+    };
+  });
 }
-
-const DATES = generateDates();
 
 function Header() {
   return (
@@ -88,7 +93,7 @@ function Header() {
 }
 
 interface DateCardProps {
-  item: (typeof DATES)[0];
+  item: DateItem;
   selected: boolean;
   onPress: () => void;
 }
@@ -96,17 +101,17 @@ interface DateCardProps {
 function DateCard({ item, selected, onPress }: DateCardProps) {
   return (
     <TouchableOpacity
-      activeOpacity={0.8}
-      onPress={onPress}
-      style={[s.dateCard, selected && s.dateCardActive]}
+      activeOpacity={item.available ? 0.8 : 1}
+      onPress={item.available ? onPress : undefined}
+      style={[s.dateCard, selected && s.dateCardActive, !item.available && s.dateCardDisabled]}
     >
-      <Text style={[s.dateDay, selected && s.dateDayActive]}>
+      <Text style={[s.dateDay, selected && s.dateDayActive, !item.available && s.dateTextDisabled]}>
         {item.dayName}
       </Text>
-      <Text style={[s.dateNum, selected && s.dateNumActive]}>
+      <Text style={[s.dateNum, selected && s.dateNumActive, !item.available && s.dateTextDisabled]}>
         {item.date}
       </Text>
-      <Text style={[s.dateMonth, selected && s.dateMonthActive]}>
+      <Text style={[s.dateMonth, selected && s.dateMonthActive, !item.available && s.dateTextDisabled]}>
         {item.month}
       </Text>
     </TouchableOpacity>
@@ -114,9 +119,11 @@ function DateCard({ item, selected, onPress }: DateCardProps) {
 }
 
 function DatePicker({
+  dates,
   selectedDate,
   onSelect,
 }: {
+  dates: DateItem[];
   selectedDate: Date;
   onSelect: (d: Date) => void;
 }) {
@@ -135,7 +142,7 @@ function DatePicker({
         snapToInterval={DATE_W + 8}
         decelerationRate="fast"
       >
-        {DATES.map((d, idx) => (
+        {dates.map((d, idx) => (
           <DateCard
             key={idx}
             item={d}
@@ -206,10 +213,20 @@ function PoliCard({ poli, selected, onPress, index }: PoliCardProps) {
 }
 
 export function ReservationScreen() {
-  const [selectedDate, setSelectedDate] = useState(DATES[0].full);
+  const [dates, setDates] = useState<DateItem[]>(() => generateDates());
+  const [selectedDate, setSelectedDate] = useState(dates[0].full);
   const [selectedPoli, setSelectedPoli] = useState('');
   const [poliList, setPoliList] = useState<PoliData[]>([]);
   const router = useRouter();
+
+  useEffect(() => {
+    api.get<{ dates: DateItem[] }>('/api/appointments/available-dates?poliId=')
+      .then((res) => {
+        const enriched = generateDates(res.data.dates);
+        setDates(enriched);
+      })
+      .catch(() => {});
+  }, []);
 
   const fetchPoli = useCallback(async (date: Date) => {
     try {
@@ -264,7 +281,14 @@ export function ReservationScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Header />
+          {!dates[0]?.available && (
+            <View style={s.closedNotice}>
+              <Ionicons name="time-outline" size={16} color={C.orangeText} />
+              <Text style={s.closedNoticeText}>Puskesmas sudah tutup. Silakan pilih tanggal lain.</Text>
+            </View>
+          )}
           <DatePicker
+            dates={dates}
             selectedDate={selectedDate}
             onSelect={setSelectedDate}
           />
@@ -418,6 +442,32 @@ const s = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: C.orangeText,
+  },
+
+  dateCardDisabled: {
+    backgroundColor: C.disabledBg,
+    borderColor: C.disabledBg,
+  },
+  dateTextDisabled: {
+    color: C.disabledText,
+  },
+
+  closedNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    backgroundColor: C.orangeBg,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  closedNoticeText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: C.orangeText,
+    flex: 1,
   },
 
   spacer: { height: 20 },

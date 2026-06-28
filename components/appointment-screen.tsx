@@ -39,6 +39,8 @@ const C = {
   successText: '#166534',
   danger: '#ef4444',
   dangerBg: '#fef2f2',
+  disabledBg: '#e2e8f0',
+  disabledText: '#cbd5e1',
   orangeBg: '#fff7ed',
   orangeText: '#9a3412',
 };
@@ -205,6 +207,14 @@ export function AppointmentScreen() {
   const queueCount = Number(params.queueCount ?? 0);
   const estWait = Number(params.estWait ?? 0);
 
+  const now = new Date();
+  const bookDate = new Date(tanggal);
+  const isToday =
+    bookDate.getFullYear() === now.getFullYear() &&
+    bookDate.getMonth() === now.getMonth() &&
+    bookDate.getDate() === now.getDate();
+  const isClosed = isToday && now.getHours() >= 18;
+
   const {
     control,
     handleSubmit,
@@ -293,17 +303,25 @@ export function AppointmentScreen() {
             </View>
 
             <View style={s.actions}>
+              {isClosed && (
+                <View style={s.closedWarning}>
+                  <Ionicons name="alert-circle-outline" size={16} color={C.danger} />
+                  <Text style={s.closedWarningText}>Puskesmas sudah tutup. Booking tidak tersedia untuk hari ini.</Text>
+                </View>
+              )}
+
               <TouchableOpacity
-                style={s.confirmBtn}
-                onPress={handleSubmit(onSubmit)}
+                style={[s.confirmBtn, isClosed && s.confirmDisabled]}
+                onPress={isClosed ? undefined : handleSubmit(onSubmit)}
                 activeOpacity={0.85}
+                disabled={isClosed}
               >
                 <Ionicons
                   name="share-outline"
                   size={18}
-                  color="#fff"
+                  color={isClosed ? C.textMuted : '#fff'}
                 />
-                <Text style={s.confirmText}>Konfirmasi Antrean</Text>
+                <Text style={[s.confirmText, isClosed && s.confirmTextDisabled]}>Konfirmasi Antrean</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -510,7 +528,25 @@ const s = StyleSheet.create({
     height: 54,
     gap: 8,
   },
+  confirmDisabled: { backgroundColor: C.disabledBg },
   confirmText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+  confirmTextDisabled: { color: C.disabledText },
+
+  closedWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: C.dangerBg,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  closedWarningText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: C.danger,
+    flex: 1,
+  },
   cancelBtn: {
     alignItems: 'center',
     justifyContent: 'center',
