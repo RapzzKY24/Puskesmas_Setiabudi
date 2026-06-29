@@ -7,5 +7,6 @@ import { WebsocketModule } from '../websocket/websocket.module';
   imports: [WebsocketModule],
   controllers: [AntreanController],
   providers: [AntreanService],
+  exports: [AntreanService],
 })
 export class AntreanModule {}

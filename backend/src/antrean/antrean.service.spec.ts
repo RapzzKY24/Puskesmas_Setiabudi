@@ -26,6 +26,8 @@ describe('AntreanService', () => {
     service = module.get<AntreanService>(AntreanService);
     prisma = mockPrisma;
     ws = mockWsGateway;
+
+    jest.spyOn(service, 'autoExpire').mockResolvedValue(undefined);
   });
 
   describe('getActive', () => {
@@ -83,12 +85,19 @@ describe('AntreanService', () => {
 
       const result = await service.getMyQueueInfo('user-1');
 
+      const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+      const baseMin = Math.max(nowMin, 8 * 60);
+      const expectedTotal = baseMin + 3 * 30;
+      const jam = Math.floor(expectedTotal / 60) % 24;
+      const menit = expectedTotal % 60;
+      const expectedLabel = `Estimasi dilayani pukul ${String(jam).padStart(2, '0')}.${String(menit).padStart(2, '0')} WIB`;
+
       expect(result.queueAhead).toBe(3);
       expect(result.totalQueue).toBe(5);
       expect(result.position).toBe(4);
       expect(result.currentServing).toBe('UMUM-003');
-      expect(result.estWaitMin).toBe(120);  // 4 × 30
-      expect(result.estWaitLabel).toBe('Estimasi dilayani pukul 10.00 WIB');
+      expect(result.estWaitMin).toBe(90);  // 3 × 30
+      expect(result.estWaitLabel).toBe(expectedLabel);
     });
 
     it('should return position 1 when no one ahead', async () => {
@@ -106,9 +115,17 @@ describe('AntreanService', () => {
 
       const result = await service.getMyQueueInfo('user-1');
 
+      const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+      const baseMin = Math.max(nowMin, 8 * 60);
+      const expectedTotal = baseMin + 0 * 30;
+      const jam = Math.floor(expectedTotal / 60) % 24;
+      const menit = expectedTotal % 60;
+      const expectedLabel = `Estimasi dilayani pukul ${String(jam).padStart(2, '0')}.${String(menit).padStart(2, '0')} WIB`;
+
       expect(result.position).toBe(1);
       expect(result.currentServing).toBeNull();
-      expect(result.estWaitLabel).toBe('Estimasi dilayani pukul 08.30 WIB');
+      expect(result.estWaitMin).toBe(0);
+      expect(result.estWaitLabel).toBe(expectedLabel);
     });
 
     it('should use poli estWait for estimation', async () => {
@@ -126,8 +143,15 @@ describe('AntreanService', () => {
 
       const result = await service.getMyQueueInfo('user-1');
 
-      expect(result.estWaitMin).toBe(75);  // 5 × 15
-      expect(result.estWaitLabel).toBe('Estimasi dilayani pukul 09.15 WIB');
+      const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+      const baseMin = Math.max(nowMin, 8 * 60);
+      const expectedTotal = baseMin + 4 * 15;
+      const jam = Math.floor(expectedTotal / 60) % 24;
+      const menit = expectedTotal % 60;
+      const expectedLabel = `Estimasi dilayani pukul ${String(jam).padStart(2, '0')}.${String(menit).padStart(2, '0')} WIB`;
+
+      expect(result.estWaitMin).toBe(60);  // 4 × 15
+      expect(result.estWaitLabel).toBe(expectedLabel);
     });
 
     it('should handle case where poli is null gracefully', async () => {
@@ -142,8 +166,15 @@ describe('AntreanService', () => {
 
       const result = await service.getMyQueueInfo('user-1');
 
-      expect(result.estWaitMin).toBe(45);  // 3 × 15 (default)
-      expect(result.estWaitLabel).toBe('Estimasi dilayani pukul 08.45 WIB');
+      const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+      const baseMin = Math.max(nowMin, 8 * 60);
+      const expectedTotal = baseMin + 2 * 15;
+      const jam = Math.floor(expectedTotal / 60) % 24;
+      const menit = expectedTotal % 60;
+      const expectedLabel = `Estimasi dilayani pukul ${String(jam).padStart(2, '0')}.${String(menit).padStart(2, '0')} WIB`;
+
+      expect(result.estWaitMin).toBe(30);  // 2 × 15 (default)
+      expect(result.estWaitLabel).toBe(expectedLabel);
     });
   });
 

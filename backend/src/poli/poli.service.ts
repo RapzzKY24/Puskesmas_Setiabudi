@@ -2,13 +2,18 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePoliRequestDto } from './dto/create-poli-request.dto';
 import { UpdatePoliRequestDto } from './dto/update-poli-request.dto';
+import { AntreanService } from '../antrean/antrean.service';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class PoliService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly antreanService: AntreanService,
+  ) {}
 
   async findAll(includeInactive = false, tanggal?: string) {
+    await this.antreanService.autoExpire();
     const polis = await this.prisma.poli.findMany({
       where: includeInactive ? {} : { active: true },
     });

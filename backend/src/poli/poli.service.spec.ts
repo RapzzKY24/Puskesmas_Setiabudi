@@ -4,11 +4,16 @@ import { PoliService } from './poli.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { mockPrisma } from '../../test/mocks/prisma.service.mock';
 import { mockPoli } from '../../test/factories/data.factory';
+import { AntreanService } from '../antrean/antrean.service';
 import { Prisma } from '@prisma/client';
 
 describe('PoliService', () => {
   let service: PoliService;
   let prisma: typeof mockPrisma;
+
+  const mockAntreanService = {
+    autoExpire: jest.fn().mockResolvedValue(undefined),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -17,6 +22,7 @@ describe('PoliService', () => {
       providers: [
         PoliService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: AntreanService, useValue: mockAntreanService },
       ],
     }).compile();
 

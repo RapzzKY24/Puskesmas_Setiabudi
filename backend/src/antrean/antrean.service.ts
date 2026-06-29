@@ -10,7 +10,69 @@ export class AntreanService {
     private readonly ws: WebsocketGateway,
   ) {}
 
+  async autoExpire() {
+    const now = new Date();
+    const dayStart = new Date(now);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(now);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    const waiting = await this.prisma.antrean.findMany({
+      where: {
+        status: { in: ['WAITING', 'CALLED'] },
+        appointment: { tanggal: { lte: dayEnd } },
+      },
+      include: { poli: true },
+    });
+
+    const JAM_BUKA = 8;
+    const expiredIds: string[] = [];
+
+    for (const antrean of waiting) {
+      const nomorUrut = parseInt(antrean.nomor.split('-').pop() || '0', 10);
+      if (nomorUrut === 0) continue;
+
+      const estWait = antrean.poli?.estWait ?? 15;
+      const createdMin = antrean.createdAt.getHours() * 60 + antrean.createdAt.getMinutes();
+      const baseMin = Math.max(createdMin, JAM_BUKA * 60);
+      const estimasiMenit = baseMin + nomorUrut * estWait + estWait;
+      const estimasiJam = Math.floor(estimasiMenit / 60);
+      const estimasiMenitSisa = estimasiMenit % 60;
+
+      const estimasiTime = new Date(dayStart);
+      estimasiTime.setHours(estimasiJam, estimasiMenitSisa, 0, 0);
+
+      if (now > estimasiTime) {
+        expiredIds.push(antrean.id);
+      }
+    }
+
+    if (expiredIds.length > 0) {
+      const expiredAntreans = await this.prisma.antrean.findMany({
+        where: { id: { in: expiredIds } },
+        select: { id: true, appointmentId: true },
+      });
+
+      const apptIds = expiredAntreans
+        .map((a) => a.appointmentId)
+        .filter((id): id is string => id !== null);
+
+      await this.prisma.antrean.updateMany({
+        where: { id: { in: expiredIds } },
+        data: { status: 'NO_SHOW', cancelledAt: now },
+      });
+
+      if (apptIds.length > 0) {
+        await this.prisma.appointment.updateMany({
+          where: { id: { in: apptIds } },
+          data: { status: 'CANCELLED' },
+        });
+      }
+    }
+  }
+
   async getActive(userId: string) {
+    await this.autoExpire();
     return this.prisma.antrean.findFirst({
       where: { userId, status: { in: ['WAITING', 'CALLED', 'IN_SERVICE'] } },
       include: { poli: true, appointment: true },
@@ -19,6 +81,7 @@ export class AntreanService {
   }
 
   async getMyQueueInfo(userId: string) {
+    await this.autoExpire();
     const antrean = await this.prisma.antrean.findFirst({
       where: { userId, status: { in: ['WAITING', 'CALLED', 'IN_SERVICE'] } },
       include: { poli: true, appointment: true },
@@ -57,10 +120,13 @@ export class AntreanService {
       orderBy: { updatedAt: 'desc' },
     });
 
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
     const JAM_BUKA = 8;
-    const position = queueAhead + 1;
-    const totalMenit = position * (antrean.poli?.estWait ?? 15);
-    const jam = JAM_BUKA + Math.floor(totalMenit / 60);
+    const baseMin = Math.max(nowMin, JAM_BUKA * 60);
+    const estFromNow = queueAhead * (antrean.poli?.estWait ?? 15);
+    const totalMenit = baseMin + estFromNow;
+    const jam = Math.floor(totalMenit / 60) % 24;
     const menit = totalMenit % 60;
     const jamStr = `${String(jam).padStart(2, '0')}.${String(menit).padStart(2, '0')}`;
 
@@ -68,9 +134,9 @@ export class AntreanService {
       antrean,
       queueAhead,
       totalQueue,
-      position,
+      position: queueAhead + 1,
       currentServing: inService?.nomor ?? null,
-      estWaitMin: totalMenit,
+      estWaitMin: estFromNow,
       estWaitLabel: `Estimasi dilayani pukul ${jamStr} WIB`,
     };
   }
@@ -83,6 +149,7 @@ export class AntreanService {
   }
 
   async findAll(poliId?: string) {
+    await this.autoExpire();
     const where: Prisma.AntreanWhereInput = { status: { in: ['WAITING', 'CALLED', 'IN_SERVICE'] } };
     if (poliId) where.poliId = poliId;
 
@@ -94,6 +161,7 @@ export class AntreanService {
   }
 
   async getStatus(poliId: string, antreanId?: string) {
+    await this.autoExpire();
     const inService = await this.prisma.antrean.findFirst({
       where: { poliId, status: 'IN_SERVICE' },
       orderBy: { updatedAt: 'desc' },

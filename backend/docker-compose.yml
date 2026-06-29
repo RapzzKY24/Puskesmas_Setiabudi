@@ -3,6 +3,7 @@ services:
     image: postgres:16-alpine
     container_name: puskemas-db
     environment:
+      TZ: Asia/Jakarta
       POSTGRES_DB: puskemas
       POSTGRES_USER: puskemas
       POSTGRES_PASSWORD: puskemas123
